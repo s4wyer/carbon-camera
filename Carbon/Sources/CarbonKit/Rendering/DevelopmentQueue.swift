@@ -24,7 +24,7 @@ final class DevelopmentQueue: ObservableObject {
         let job = DevelopmentJob(shotID: shot.id, recipeVersionID: shot.currentRecipe.id)
         activeJobs.append(job)
         
-        Task {
+        Task { @MainActor in
             await process(shot: shot, preset: preset, parameters: parameters, job: job)
         }
     }

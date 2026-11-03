@@ -385,7 +385,7 @@ final class PhotoRenderer: ObservableObject {
             of: image,
             format: .RGBA8,
             colorSpace: colorSpace,
-            options: [CIImageRepresentationOption.lossyCompressionQuality: 0.92]
+            options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.92]
         ) {
             return heifData
         }
@@ -394,7 +394,7 @@ final class PhotoRenderer: ObservableObject {
         if let jpegData = ciContext.jpegRepresentation(
             of: image,
             colorSpace: colorSpace,
-            options: [CIImageRepresentationOption.lossyCompressionQuality: 0.95]
+            options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.95]
         ) {
             return jpegData
         }

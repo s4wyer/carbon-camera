@@ -273,7 +273,10 @@ final class CameraManager: NSObject, ObservableObject {
             let settings = self.buildPhotoSettings()
             let captureID = UUID().uuidString
             
-            let delegate = PhotoCaptureDelegate(captureID: captureID) { [weak self] result in
+            let delegate = PhotoCaptureDelegate(
+                captureID: captureID,
+                flashMode: self.activeFlashMode
+            ) { [weak self] result in
                 guard let self = self else { return }
                 Task { @MainActor in
                     self.isCapacitorReady = true
@@ -331,14 +334,20 @@ final class CameraManager: NSObject, ObservableObject {
 
 private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     private let captureID: String
+    private let requestedFlashMode: AVCaptureDevice.FlashMode
     private let completion: (Result<Shot, Error>) -> Void
     
     private var rawData: Data?
     private var hevcData: Data?
     private var captureMetadata: Shot.CaptureMetadata?
     
-    init(captureID: String, completion: @escaping (Result<Shot, Error>) -> Void) {
+    init(
+        captureID: String,
+        flashMode: AVCaptureDevice.FlashMode,
+        completion: @escaping (Result<Shot, Error>) -> Void
+    ) {
         self.captureID = captureID
+        self.requestedFlashMode = flashMode
         self.completion = completion
     }
     
@@ -380,7 +389,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
             iso: Float(iso),
             exposureDuration: cmDuration,
             sceneEV: sceneEV,
-            flashState: activeFlashMode == .on ? .on : (activeFlashMode == .auto ? .auto : .off),
+            flashState: requestedFlashMode == .on ? .on : (requestedFlashMode == .auto ? .auto : .off),
             lensPosition: 0.5,
             orientation: orientation
         )
@@ -476,11 +485,13 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                 )
                 
                 // Queue background rendering
-                DevelopmentQueue.shared.submit(
-                    shot: shot,
-                    preset: defaultPreset,
-                    parameters: defaultPreset.baseParameters
-                )
+                await MainActor.run {
+                    DevelopmentQueue.shared.submit(
+                        shot: shot,
+                        preset: defaultPreset,
+                        parameters: defaultPreset.baseParameters
+                    )
+                }
                 
                 completion(.success(shot))
             } catch {

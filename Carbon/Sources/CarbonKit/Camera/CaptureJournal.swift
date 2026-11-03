@@ -49,7 +49,7 @@ public actor CaptureJournal {
     private let fileManager = FileManager.default
     private let logger = Logger(subsystem: "app.carbon", category: "CaptureJournal")
     
-    private var baseDirectory: URL {
+    private nonisolated var baseDirectory: URL {
         let paths = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
         let dir = paths[0].appendingPathComponent("CarbonCaptures", isDirectory: true)
         if !fileManager.fileExists(atPath: dir.path) {
