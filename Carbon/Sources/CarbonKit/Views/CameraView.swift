@@ -1,122 +1,142 @@
+// U01, C10, U07, C07, U02, U03, R08, B10 — Full-Screen Camera Interface
+// Matches Screen 02 mockup pixel-for-pixel
+
 import SwiftUI
 import AVFoundation
-import UIKit
 
-/// 02 CAMERA: Full-screen camera with controls matching reference mockup
+/// 02 CAMERA: Photo-first viewfinder with tactile shutter, prime selector, and rotary MOOD dial
 struct CameraView: View {
     @ObservedObject var coordinator: AppCoordinator
     @StateObject private var cameraManager = CameraManager()
     
     // UI state
-    @State private var selectedFocalLength: FocalLength = .f35
-    @State private var moodValue: Double = 0.0  // -2 to +2 EV
-    @State private var warmthValue: Int = 1      // Warm 01, 02, etc.
-    @State private var showPresetSelector = false
-    @State private var showLibrary = false
-    
-    enum FocalLength: String, CaseIterable {
-        case f24 = "24"
-        case f35 = "35"
-        case f50 = "50"
-    }
+    @State private var selectedFocal: Double = 35.0
+    @State private var moodExposure: Float = 0.0 // -2.0 to +2.0 EV
+    @State private var warmthStep: Int = 1       // WARM 01..05
+    @State private var showPresetMenu = false
     
     var body: some View {
         ZStack {
-            // Camera preview
-            CameraPreviewView(session: cameraManager.session)
+            // Remjet background (#0E0E10)
+            Color("Remjet")
                 .ignoresSafeArea()
             
-            // Composition guides (corner brackets, D-025 / U07)
-            CompositionGuidesView()
-                .ignoresSafeArea()
-            
-            // Overlaid controls
-            VStack {
-                // Top bar: Preset name + Warmth indicator
+            VStack(spacing: 0) {
+                // Top header bar (over preview)
                 HStack {
-                    Button(action: { showPresetSelector = true }) {
+                    Button(action: { showPresetMenu = true }) {
                         Text("NATURAL")
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.black.opacity(0.4))
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.9))
+                            .tracking(1.5)
                     }
                     
                     Spacer()
                     
-                    Text("WARM \(String(format: "%02d", warmthValue))")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                    // Flash / Warmth toggle
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            cameraManager.cycleFlashMode()
+                        }) {
+                            Image(systemName: flashIcon)
+                                .font(.system(size: 12))
+                                .foregroundColor(cameraManager.isCapacitorReady ? Color("Safelight") : .white.opacity(0.5))
+                        }
+                        
+                        Text("WARM \(String(format: "%02d", warmthStep))")
+                            .font(.system(size: 13, weight: .regular, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.9))
+                            .tracking(1.0)
+                    }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
                 .padding(.top, 16)
+                .padding(.bottom, 12)
+                
+                // Viewfinder area (dominant photographic center)
+                ZStack {
+                    CameraPreviewView(session: cameraManager.session)
+                        .clipped()
+                        .gesture(
+                            DragGesture(minimumDistance: 10)
+                                .onChanged { val in
+                                    // Vertical preview swipe adjusts Mood EV bias (U02)
+                                    let deltaEV = Float(-val.translation.height / 150.0)
+                                    moodExposure = max(-2.0, min(2.0, deltaEV))
+                                    cameraManager.setExposureBias(moodExposure)
+                                }
+                        )
+                    
+                    // Corner brightlines (U07)
+                    CornerBrightlinesView()
+                }
+                .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                .padding(.horizontal, 16)
                 
                 Spacer()
                 
-                // Bottom control cluster
+                // Bottom control deck
                 VStack(spacing: 24) {
-                    // Focal length selector: 24 / 35 / 50
-                    HStack(spacing: 16) {
-                        ForEach(FocalLength.allCases, id: \.self) { focal in
-                            Button(action: {
-                                selectedFocalLength = focal
-                                cameraManager.setZoom(for: Double(focal.rawValue)!)
-                            }) {
-                                Text(focal.rawValue)
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(selectedFocalLength == focal ? .white : .white.opacity(0.6))
-                                    .frame(width: 44, height: 32)
-                                    .background(selectedFocalLength == focal ? Color.white.opacity(0.2) : Color.clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 999))
+                    // Focal length selector: 24 / (35) / 50 pills (C10)
+                    HStack(spacing: 32) {
+                        focalButton(24)
+                        focalButton(35)
+                        focalButton(50)
+                    }
+                    .padding(.top, 8)
+                    
+                    // Shutter deck row
+                    HStack(alignment: .center) {
+                        // Left: Last photo thumbnail shortcut to Library (L01, N05)
+                        Button(action: {
+                            coordinator.navigateTo(.library)
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.white.opacity(0.12))
+                                    .frame(width: 48, height: 48)
+                                
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.white.opacity(0.7))
                             }
                         }
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.3))
-                    .clipShape(RoundedRectangle(cornerRadius: 999))
-                    
-                    // Main shutter row
-                    HStack(spacing: 0) {
-                        // Left: Last photo thumbnail (taps to library)
-                        Button(action: { coordinator.navigateTo(.library) }) {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 52, height: 52)
-                                .overlay(
-                                    Image(systemName: "photo")
-                                        .foregroundColor(.white.opacity(0.6))
-                                )
-                        }
+                        .frame(width: 60)
                         
                         Spacer()
                         
-                        // Center: Shutter button (large circle)
-                        Button(action: { cameraManager.capturePhoto() }) {
+                        // Center: 72pt tactile shutter button (C04)
+                        Button(action: {
+                            triggerShutter()
+                        }) {
                             ZStack {
                                 Circle()
-                                    .stroke(Color.white, lineWidth: 4)
-                                    .frame(width: 76, height: 76)
+                                    .stroke(Color.white, lineWidth: 3.5)
+                                    .frame(width: 74, height: 74)
                                 
                                 Circle()
-                                    .fill(Color.white)
-                                    .frame(width: 64, height: 64)
+                                    .fill(Color("Receipt"))
+                                    .frame(width: 62, height: 62)
                             }
                         }
                         
                         Spacer()
                         
-                        // Right: MOOD dial (exposure adjustment, D-025 / R08)
-                        MoodDialView(value: $moodValue)
+                        // Right: Rotary MOOD dial (-2 to +2 EV) (U02, R08)
+                        VStack(spacing: 4) {
+                            RotaryMoodDial(value: $moodExposure) { newEV in
+                                cameraManager.setExposureBias(newEV)
+                            }
+                            
+                            Text("MOOD")
+                                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.7))
+                                .tracking(1.0)
+                        }
+                        .frame(width: 60)
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 20)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 28)
                 }
             }
         }
@@ -126,23 +146,64 @@ struct CameraView: View {
         .onDisappear {
             cameraManager.stopSession()
         }
+        .sheet(isPresented: $showPresetMenu) {
+            PresetSelectorSheet()
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private var flashIcon: String {
+        switch cameraManager.activeFlashMode {
+        case .auto: return "bolt.badge.a"
+        case .on: return "bolt.fill"
+        case .off: return "bolt.slash"
+        @unknown default: return "bolt.badge.a"
+        }
+    }
+    
+    @ViewBuilder
+    private func focalButton(_ mm: Double) -> some View {
+        let isSelected = selectedFocal == mm
+        Button(action: {
+            selectedFocal = mm
+            cameraManager.setFocalLength(mm)
+        }) {
+            Text("\(Int(mm))")
+                .font(.system(size: 14, weight: isSelected ? .semibold : .regular, design: .default))
+                .foregroundColor(isSelected ? .white : .white.opacity(0.55))
+                .frame(width: 42, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(isSelected ? Color.white.opacity(0.6) : Color.clear, lineWidth: 1)
+                )
+        }
+    }
+    
+    private func triggerShutter() {
+        // Haptic feedback (B10)
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
+        
+        cameraManager.capturePhoto()
     }
 }
 
-/// Camera preview using AVCaptureVideoPreviewLayer
+// MARK: - Viewfinder Preview
+
 private struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
     
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
+        view.backgroundColor = .black
+        let layer = AVCaptureVideoPreviewLayer(session: session)
+        layer.videoGravity = .resizeAspectFill
+        view.layer.addSublayer(layer)
         
         DispatchQueue.main.async {
-            previewLayer.frame = view.bounds
+            layer.frame = view.bounds
         }
-        
         return view
     }
     
@@ -153,80 +214,146 @@ private struct CameraPreviewView: UIViewRepresentable {
     }
 }
 
-/// Composition guides: corner brackets (D-025 / U07)
-private struct CompositionGuidesView: View {
+// MARK: - Corner Brightlines (U07)
+
+private struct CornerBrightlinesView: View {
     var body: some View {
-        GeometryReader { geometry in
-            let inset: CGFloat = 24
-            let length: CGFloat = 20
-            let lineWidth: CGFloat = 1.5
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let bracketLength: CGFloat = 16
+            let lineWidth: CGFloat = 1.0
+            let inset: CGFloat = 8
             
             Path { path in
-                // Top-left
-                path.move(to: CGPoint(x: inset, y: inset + length))
+                // Top-Left
+                path.move(to: CGPoint(x: inset, y: inset + bracketLength))
                 path.addLine(to: CGPoint(x: inset, y: inset))
-                path.addLine(to: CGPoint(x: inset + length, y: inset))
+                path.addLine(to: CGPoint(x: inset + bracketLength, y: inset))
                 
-                // Top-right
-                path.move(to: CGPoint(x: geometry.size.width - inset - length, y: inset))
-                path.addLine(to: CGPoint(x: geometry.size.width - inset, y: inset))
-                path.addLine(to: CGPoint(x: geometry.size.width - inset, y: inset + length))
+                // Top-Right
+                path.move(to: CGPoint(x: w - inset - bracketLength, y: inset))
+                path.addLine(to: CGPoint(x: w - inset, y: inset))
+                path.addLine(to: CGPoint(x: w - inset, y: inset + bracketLength))
                 
-                // Bottom-left
-                path.move(to: CGPoint(x: inset, y: geometry.size.height - inset - length))
-                path.addLine(to: CGPoint(x: inset, y: geometry.size.height - inset))
-                path.addLine(to: CGPoint(x: inset + length, y: geometry.size.height - inset))
+                // Bottom-Left
+                path.move(to: CGPoint(x: inset, y: h - inset - bracketLength))
+                path.addLine(to: CGPoint(x: inset, y: h - inset))
+                path.addLine(to: CGPoint(x: inset + bracketLength, y: h - inset))
                 
-                // Bottom-right
-                path.move(to: CGPoint(x: geometry.size.width - inset - length, y: geometry.size.height - inset))
-                path.addLine(to: CGPoint(x: geometry.size.width - inset, y: geometry.size.height - inset))
-                path.addLine(to: CGPoint(x: geometry.size.width - inset, y: geometry.size.height - inset - length))
+                // Bottom-Right
+                path.move(to: CGPoint(x: w - inset - bracketLength, y: h - inset))
+                path.addLine(to: CGPoint(x: w - inset, y: h - inset))
+                path.addLine(to: CGPoint(x: w - inset, y: h - inset - bracketLength))
             }
-            .stroke(Color.white.opacity(0.8), lineWidth: lineWidth)
+            .stroke(Color.white.opacity(0.85), lineWidth: lineWidth)
         }
     }
 }
 
-/// MOOD dial: rotary exposure control (-2 to +2 EV, D-025 / R08)
-private struct MoodDialView: View {
-    @Binding var value: Double
-    @State private var dragOffset: CGFloat = 0
+// MARK: - Rotary MOOD Dial (U02, R08)
+
+private struct RotaryMoodDial: View {
+    @Binding var value: Float
+    let onChange: (Float) -> Void
     
     var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                // Dial body
-                Circle()
-                    .fill(Color(hex: "#2A2A2A"))
-                    .frame(width: 48, height: 48)
-                
-                // Notch indicator
+        ZStack {
+            // Metallic dial face
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 0.35), Color(white: 0.15)],
+                        center: .center,
+                        startRadius: 2,
+                        endRadius: 24
+                    )
+                )
+                .frame(width: 46, height: 46)
+                .overlay(
+                    Circle().stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+            
+            // Radial tick marks
+            ForEach(0..<12) { i in
                 Rectangle()
-                    .fill(Color.white)
-                    .frame(width: 2, height: 10)
-                    .offset(y: -16)
-                    .rotationEffect(.degrees(value * 45)) // -90 to +90 degrees
+                    .fill(Color.white.opacity(i % 3 == 0 ? 0.6 : 0.25))
+                    .frame(width: 1, height: i % 3 == 0 ? 5 : 3)
+                    .offset(y: -18)
+                    .rotationEffect(.degrees(Double(i) * 30))
+            }
+            
+            // Notch needle indicator
+            Rectangle()
+                .fill(Color("Receipt"))
+                .frame(width: 2, height: 8)
+                .offset(y: -14)
+                .rotationEffect(.degrees(Double(value) * 45)) // -90° to +90°
+        }
+        .gesture(
+            DragGesture()
+                .onChanged { g in
+                    let delta = Float(g.translation.width / 40.0)
+                    let newEV = max(-2.0, min(2.0, delta))
+                    value = newEV
+                    onChange(newEV)
+                }
+        )
+    }
+}
+
+// MARK: - Preset Selector Sheet (SET13b "Stolen Goods" Menu)
+
+private struct PresetSelectorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List {
+                Section(header: Text("Carbon Originals")) {
+                    ForEach(PresetLibrary.presets(in: .ours)) { preset in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(preset.displayName)
+                                    .font(.headline)
+                                Text(preset.description)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if preset.displayOrder == 0 {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(Color("CarbonInk"))
+                            }
+                        }
+                    }
+                }
                 
-                // Tick marks
-                ForEach(0..<8) { i in
-                    Rectangle()
-                        .fill(Color.white.opacity(0.3))
-                        .frame(width: 1, height: 4)
-                        .offset(y: -20)
-                        .rotationEffect(.degrees(Double(i) * 45))
+                Section(
+                    header: Text("Stolen Goods"),
+                    footer: Text("Recovered from other camera apps with cheeky attribution (D-024).")
+                ) {
+                    ForEach(PresetLibrary.presets(in: .stolen)) { preset in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(preset.displayNameWithAttribution)
+                                .font(.subheadline)
+                            if let attribution = preset.attributionText {
+                                Text(attribution)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                 }
             }
-            .gesture(
-                DragGesture()
-                    .onChanged { gesture in
-                        let delta = gesture.translation.width / 50.0
-                        value = max(-2.0, min(2.0, delta))
-                    }
-            )
-            
-            Text("MOOD")
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.6))
+            .navigationTitle("Presets")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
+        .presentationDetents([.medium, .large])
     }
 }
