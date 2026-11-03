@@ -70,7 +70,7 @@ final class CaptureJournalTests: XCTestCase {
             recipeID: "hevc-only",
             presetDefinitionID: UUID(),
             engineVersion: "1.0",
-            source: .hevcProcessed,
+            source: .processedHEVC,
             parameters: RecipeVersion.Parameters(
                 filmPreset: "Natural",
                 filmStrength: 1.0,
