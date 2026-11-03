@@ -35,19 +35,27 @@ jobs:
           set -euo pipefail
           cd Carbon
           xcodebuild -version
-          
-          # Use generic iOS Simulator destination available on the runner
+
+          # Pick a concrete simulator that actually exists on this runner image
+          DEST=$(xcrun simctl list devices available --json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; \
+names=[x for v in d.values() for x in v if x.get("isAvailable")]; \
+iphones=[x for x in names if "iPhone" in x["name"]]; \
+print(iphones[0]["udid"] if iphones else "")')
+          echo "Selected simulator: ${DEST:-<none>}"
+
+          if [ -n "$DEST" ]; then
+            TARGET="platform=iOS Simulator,id=$DEST"
+          else
+            TARGET="generic/platform=iOS Simulator"
+          fi
+
+          rm -rf ./build/TestResults.xcresult
           xcodebuild test \
             -project Carbon.xcodeproj \
             -scheme Carbon \
-            -destination "platform=iOS Simulator,name=iPhone 16" \
-            -enableCodeCoverage YES \
-            -resultBundlePath ./build/TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO || \
-          xcodebuild test \
-            -project Carbon.xcodeproj \
-            -scheme Carbon \
-            -destination "generic/platform=iOS Simulator" \
+            -destination "$TARGET" \
+            -derivedDataPath ./build/DerivedData \
             -enableCodeCoverage YES \
             -resultBundlePath ./build/TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO
@@ -87,6 +95,7 @@ jobs:
         with:
           name: Carbon-test-results
           path: Carbon/build/TestResults.xcresult
+          if-no-files-found: warn
           retention-days: 14
 
   verify-pipeline:

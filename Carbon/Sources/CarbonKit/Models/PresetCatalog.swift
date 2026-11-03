@@ -251,7 +251,7 @@ extension PresetLibrary {
         presetID: "nofusion-nn",
         displayName: "Nostalgic Negative",
         description: "Fuji Nostalgic Negative",
-        source: .nofusionReference(fileID: "NN", section: "README"),
+        source: .nofusionReference(presetFileID: "NN", section: "README"),
         baseParameters: PresetParameters(
             strength: 1.0,
             lutID: "nofusion-18050bdcbea97ac25f18078a4b3a1a6a775ae852ffdae2e29dfe05175a06a33e",
