@@ -136,6 +136,10 @@ jobs:
         run: |
           python verify_pipeline.py
           
+      - name: Check asset integrity
+        run: |
+          python ci/check_assets.py
+          
       - name: Check for TODO/FIXME
         run: |
           if grep -r "FIXME\|TODO\|XXX\|HACK" Carbon/Sources --exclude-dir=.build; then
