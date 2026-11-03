@@ -1,17 +1,28 @@
+// C01, C04, C07, C10, U02, U03, U13 — Camera Capture & AVFoundation Pipeline
+// Baseline: Lapse SET §1, §2
+// Overrides: D-002 (35mm default, auto flash, HEVC+RAW, zero sharpening)
+// Persisted via CaptureJournal (SET04)
+
 import AVFoundation
 import Combine
+import CoreMedia
 import Photos
 import os.log
 
-/// Camera manager: AVFoundation session, capture, and device configuration
-/// Implements D-002 baseline (Lapse camera config) with overrides
-// Capture work runs on sessionQueue; published results are delivered on MainActor.
+/// Camera manager: AVFoundation session, capture, and device configuration.
+/// Implements D-002 baseline (Lapse camera config) with overrides and durable journaling.
+@MainActor
 final class CameraManager: NSObject, ObservableObject {
     // MARK: - Published state
     @Published var session = AVCaptureSession()
     @Published var isSessionRunning = false
     @Published var captureError: Error?
-    @Published var lastCapturedPhoto: CapturedPhoto?
+    @Published var lastCapturedShot: Shot?
+    @Published var isCapacitorReady: Bool = true
+    @Published var activeFocalLength: Double = 35.0
+    @Published var activeFlashMode: AVCaptureDevice.FlashMode = .auto
+    @Published var activeExposureEV: Float = 0.0
+    @Published var activeWarmthK: Float = 0.0
     
     // MARK: - Private state
     private var videoDeviceInput: AVCaptureDeviceInput?
@@ -20,10 +31,7 @@ final class CameraManager: NSObject, ObservableObject {
     private let sessionQueue = DispatchQueue(label: "app.carbon.camera.session")
     private let logger = Logger(subsystem: "app.carbon", category: "CameraManager")
     
-    // Current settings (D-002 defaults)
-    private var currentFocalLength: Double = 35.0  // D-002 override: 35mm default
-    private var currentFlashMode: AVCaptureDevice.FlashMode = .auto  // D-002 override
-    private var currentExposureBias: Float = 0.0  // MOOD dial value
+    private let preset: CaptureModePreset = .carbonDefault
     
     // MARK: - Initialization
     override init() {
@@ -51,17 +59,16 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Session configuration (D-002 baseline)
+    // MARK: - Session configuration (Lapse SET §1 baseline + D-002)
     
     private func configureSession() {
         session.beginConfiguration()
         
-        // Session preset: .photo (high quality, D-002)
+        // Session preset: .photo / input priority (Lapse §1)
         if session.canSetSessionPreset(.photo) {
             session.sessionPreset = .photo
         }
         
-        // Add video device input
         guard let device = selectBestDevice() else {
             logger.error("No suitable camera device found")
             session.commitConfiguration()
@@ -85,70 +92,74 @@ final class CameraManager: NSObject, ObservableObject {
         if session.canAddOutput(photoOutput) {
             session.addOutput(photoOutput)
             
-            // Configure photo output (D-002: RAW+HEVC when supported)
+            // Lapse §1: Max quality prioritization
             photoOutput.maxPhotoQualityPrioritization = .quality
             
-            // Enable RAW+processed delivery (C04, D-002 override)
+            // Format setup (D-002: RAW+HEVC when available)
             if photoOutput.availableRawPhotoPixelFormatTypes.count > 0 {
-                photoOutput.isAppleProRAWEnabled = photoOutput.isAppleProRAWSupported
+                logger.info("Bayer RAW capture supported on device")
             }
         }
         
         session.commitConfiguration()
         
-        // Configure device (focus, exposure, white balance)
-        configureDevice(device)
+        // Device-level configurations
+        configureDeviceSettings(device)
         
-        // Start running
+        // Start session on background queue
         session.startRunning()
-        Task { @MainActor in
-            self.isSessionRunning = true
-        }
         
-        logger.info("Camera session configured and started")
+        Task { @MainActor in
+            self.isSessionRunning = self.session.isRunning
+            self.activeFocalLength = self.preset.defaultFocalLengthEquivalentMM
+            self.logger.info("Camera session started successfully")
+        }
     }
     
     private func selectBestDevice() -> AVCaptureDevice? {
-        // Prefer triple camera system, fall back to dual, then wide
+        // Prefer built-in triple / dual camera for 24/35/50 primes
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [
+            .builtInTripleCamera,
+            .builtInDualWideCamera,
+            .builtInDualCamera,
+            .builtInWideAngleCamera
+        ]
+        
         let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [
-                .builtInTripleCamera,
-                .builtInDualCamera,
-                .builtInDualWideCamera,
-                .builtInWideAngleCamera
-            ],
+            deviceTypes: deviceTypes,
             mediaType: .video,
             position: .back
         )
         
-        return discoverySession.devices.first
+        return discoverySession.devices.first ?? AVCaptureDevice.default(for: .video)
     }
     
-    /// Configure device: continuous AF/AE, locked white balance, input priority (D-002)
-    private func configureDevice(_ device: AVCaptureDevice) {
+    private func configureDeviceSettings(_ device: AVCaptureDevice) {
         do {
             try device.lockForConfiguration()
             
-            // D-002: Continuous autofocus
-            if device.isFocusModeSupported(.continuousAutoFocus) {
+            // Focus: Centered continuous AF (Lapse SET §1)
+            if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.continuousAutoFocus) {
+                device.focusPointOfInterest = preset.defaultFocusPointOfInterest
                 device.focusMode = .continuousAutoFocus
             }
             
-            // D-002: Continuous auto-exposure
-            if device.isExposureModeSupported(.continuousAutoExposure) {
+            // Exposure: Centered continuous AE (Lapse SET §1)
+            if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.continuousAutoExposure) {
+                device.exposurePointOfInterest = preset.defaultExposurePointOfInterest
                 device.exposureMode = .continuousAutoExposure
             }
             
-            // D-002: Auto white balance (locked per Lapse config)
-            if device.isWhiteBalanceModeSupported(.autoWhiteBalance) {
-                device.whiteBalanceMode = .autoWhiteBalance
+            // Low-light boost & smooth autofocus (Lapse SET §1)
+            if device.isLowLightBoostSupported && preset.enablesLowLightBoost {
+                device.automaticallyEnablesLowLightBoostWhenAvailable = true
+            }
+            if device.isSmoothAutoFocusSupported && preset.enablesSmoothAutoFocus {
+                device.isSmoothAutoFocusEnabled = true
             }
             
-            // D-002: .inputPriority session preset behavior (responsiveness over max quality)
-            // Note: This is set via capture photo settings, not device property
-            
-            // Set initial zoom to 35mm equivalent
-            setZoomForFocalLength(35.0, on: device)
+            // Initial zoom to 35mm equivalent (D-002)
+            setZoomForFocalLength(preset.defaultFocalLengthEquivalentMM, on: device)
             
             device.unlockForConfiguration()
         } catch {
@@ -156,11 +167,10 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Zoom control (C10, D-025)
+    // MARK: - Focal Length Selection (C10, D-025)
     
-    func setZoom(for focalLength: Double) {
-        currentFocalLength = focalLength
-        
+    func setFocalLength(_ focalLength: Double) {
+        activeFocalLength = focalLength
         guard let device = currentDevice else { return }
         
         sessionQueue.async {
@@ -169,48 +179,47 @@ final class CameraManager: NSObject, ObservableObject {
                 self.setZoomForFocalLength(focalLength, on: device)
                 device.unlockForConfiguration()
             } catch {
-                self.logger.error("Failed to set zoom: \(error.localizedDescription)")
+                self.logger.error("Failed to set focal length zoom: \(error.localizedDescription)")
             }
         }
     }
     
     private func setZoomForFocalLength(_ focalLength: Double, on device: AVCaptureDevice) {
-        // Map 24/35/50mm to device zoom factors
-        // This is approximate; actual mapping requires device-specific calibration
-        let zoomFactor: CGFloat
-        
+        // Map 24/35/50mm to optical/digital zoom factor
+        let factor: CGFloat
         switch focalLength {
-        case 24:
-            zoomFactor = 1.0  // Ultra-wide
-        case 35:
-            zoomFactor = 1.5  // Mid-range (approximation)
-        case 50:
-            zoomFactor = 2.0  // Telephoto
-        default:
-            zoomFactor = 1.5
+        case 24: factor = 1.0  // Wide native
+        case 35: factor = 1.45 // Natural portrait crop
+        case 50: factor = 2.0  // 2x optical / crop
+        default: factor = 1.45
         }
         
-        let clampedZoom = min(max(zoomFactor, device.minAvailableVideoZoomFactor), device.maxAvailableVideoZoomFactor)
-        
-        // D-025 / C10: Ramp over ~200ms (0.2 seconds)
-        device.ramp(toVideoZoomFactor: clampedZoom, withRate: 10.0)
+        let clamped = min(max(factor, device.minAvailableVideoZoomFactor), device.maxAvailableVideoZoomFactor)
+        device.ramp(toVideoZoomFactor: clamped, withRate: 10.0) // ~200ms smooth transition
     }
     
-    // MARK: - Exposure control (D-025 / R08)
+    // MARK: - Flash Control (C07, U13, D-002)
+    
+    func cycleFlashMode() {
+        switch activeFlashMode {
+        case .auto: activeFlashMode = .on
+        case .on: activeFlashMode = .off
+        case .off: activeFlashMode = .auto
+        @unknown default: activeFlashMode = .auto
+        }
+    }
+    
+    // MARK: - Exposure & Warmth (U02, U03, R08)
     
     func setExposureBias(_ ev: Float) {
-        currentExposureBias = ev
-        
+        activeExposureEV = ev
         guard let device = currentDevice else { return }
         
         sessionQueue.async {
             do {
                 try device.lockForConfiguration()
-                
-                // Clamp to device limits
-                let clampedEV = min(max(ev, device.minExposureTargetBias), device.maxExposureTargetBias)
-                device.setExposureTargetBias(clampedEV, completionHandler: nil)
-                
+                let clamped = min(max(ev, device.minExposureTargetBias), device.maxExposureTargetBias)
+                device.setExposureTargetBias(clamped, completionHandler: nil)
                 device.unlockForConfiguration()
             } catch {
                 self.logger.error("Failed to set exposure bias: \(error.localizedDescription)")
@@ -218,28 +227,39 @@ final class CameraManager: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Photo capture (C04, D-002, D-025)
+    func setWarmthK(_ kelvinOffset: Float) {
+        activeWarmthK = kelvinOffset
+    }
+    
+    // MARK: - Photo Capture (C01, C04, SET04)
     
     func capturePhoto() {
         guard isSessionRunning else {
-            logger.warning("Capture requested but session not running")
+            logger.warning("Capture requested while session not running")
             return
+        }
+        
+        // Capacitor charging simulation (flash readiness)
+        if activeFlashMode != .off {
+            isCapacitorReady = false
         }
         
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
-            
             let settings = self.buildPhotoSettings()
+            let captureID = UUID().uuidString
             
-            let delegate = PhotoCaptureDelegate { result in
+            let delegate = PhotoCaptureDelegate(captureID: captureID) { [weak self] result in
+                guard let self = self else { return }
                 Task { @MainActor in
+                    self.isCapacitorReady = true
                     switch result {
-                    case .success(let photo):
-                        self.lastCapturedPhoto = photo
-                        self.logger.info("Photo captured successfully")
+                    case .success(let shot):
+                        self.lastCapturedShot = shot
+                        self.logger.info("Captured shot \(shot.captureID) committed to journal")
                     case .failure(let error):
                         self.captureError = error
-                        self.logger.error("Photo capture failed: \(error.localizedDescription)")
+                        self.logger.error("Capture failed: \(error.localizedDescription)")
                     }
                 }
             }
@@ -251,17 +271,15 @@ final class CameraManager: NSObject, ObservableObject {
     private func buildPhotoSettings() -> AVCapturePhotoSettings {
         var settings: AVCapturePhotoSettings
         
-        // D-002 override: Capture RAW + HEVC when supported (C04)
+        // Priority: RAW + HEVC pair (D-002)
         if photoOutput.availableRawPhotoPixelFormatTypes.count > 0,
            let rawFormat = photoOutput.availableRawPhotoPixelFormatTypes.first {
-            
-            // RAW + processed HEVC
             settings = AVCapturePhotoSettings(
                 rawPixelFormatType: rawFormat,
                 processedFormat: [
                     AVVideoCodecKey: AVVideoCodecType.hevc,
                     AVVideoCompressionPropertiesKey: [
-                        AVVideoQualityKey: 0.95  // D-025 / SET11-q1
+                        AVVideoQualityKey: 0.95
                     ]
                 ]
             )
@@ -275,27 +293,28 @@ final class CameraManager: NSObject, ObservableObject {
             ])
         }
         
-        // D-002 override: Auto flash
-        if photoOutput.supportedFlashModes.contains(.auto) {
-            settings.flashMode = currentFlashMode
+        // Flash
+        if photoOutput.supportedFlashModes.contains(activeFlashMode) {
+            settings.flashMode = activeFlashMode
         }
         
-        // D-002: Quality prioritization
         settings.photoQualityPrioritization = .quality
-        
-        // Enable depth if available (M5 future work)
-        settings.isDepthDataDeliveryEnabled = photoOutput.isDepthDataDeliveryEnabled
-        
         return settings
     }
 }
 
-// MARK: - Photo capture delegate
+// MARK: - Capture Delegate with Journal Persistence (SET04)
 
 private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
-    private let completion: (Result<CapturedPhoto, Error>) -> Void
+    private let captureID: String
+    private let completion: (Result<Shot, Error>) -> Void
     
-    init(completion: @escaping (Result<CapturedPhoto, Error>) -> Void) {
+    private var rawData: Data?
+    private var hevcData: Data?
+    private var captureMetadata: Shot.CaptureMetadata?
+    
+    init(captureID: String, completion: @escaping (Result<Shot, Error>) -> Void) {
+        self.captureID = captureID
         self.completion = completion
     }
     
@@ -309,40 +328,116 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
             return
         }
         
-        // Extract photo data
-        guard let processedData = photo.fileDataRepresentation() else {
-            completion(.failure(CaptureError.noData))
+        guard let data = photo.fileDataRepresentation() else { return }
+        
+        if photo.isRawPhoto {
+            rawData = data
+        } else {
+            hevcData = data
+        }
+        
+        // Extract Lapse SET §2 metadata tuple
+        let iso = photo.metadata[kCGImagePropertyExifISOSpeedRatings as String] as? Int ?? 100
+        let expDuration = photo.metadata[kCGImagePropertyExifExposureTime as String] as? Double ?? (1.0 / 60.0)
+        let cmDuration = CMTime(seconds: expDuration, preferredTimescale: 1000)
+        
+        captureMetadata = Shot.CaptureMetadata(
+            temperature: 5500,
+            tint: 0,
+            iso: iso,
+            exposureDuration: cmDuration,
+            sceneEV: 8.0,
+            flashState: .auto,
+            lensPosition: 0.5,
+            orientation: 1
+        )
+    }
+    
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings,
+        error: Error?
+    ) {
+        if let error = error {
+            completion(.failure(error))
             return
         }
         
-        // Extract RAW if available
-        var rawData: Data?
-        if photo.isRawPhoto {
-            rawData = processedData
+        Task {
+            do {
+                // Default recipe: Carbon Natural
+                let defaultPreset = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
+                let recipe = RecipeVersion(
+                    recipeID: "natural-v1",
+                    presetDefinitionID: defaultPreset.id,
+                    engineVersion: "1.0",
+                    source: rawData != nil ? .rawBayer : .hevcProcessed,
+                    parameters: RecipeVersion.Parameters(
+                        filmPreset: defaultPreset.displayName,
+                        filmStrength: 0.85,
+                        exposureEV: 0.0,
+                        temperatureK: 0.0,
+                        tintOffset: 0.0,
+                        contrastAmount: 1.0,
+                        saturationAmount: 1.0
+                    )
+                )
+                
+                // Durable write to journal (SET04)
+                let entry = try await CaptureJournal.shared.persist(
+                    captureID: captureID,
+                    rawBytes: rawData,
+                    hevcBytes: hevcData,
+                    recipe: recipe
+                )
+                
+                // Build Shot model
+                var sources: [SourceResource] = []
+                if let rawName = entry.rawFilename, let rawHash = entry.rawSHA256 {
+                    sources.append(SourceResource(
+                        id: UUID(),
+                        shotID: entry.id,
+                        type: .rawBayer,
+                        sourceURL: await CaptureJournal.shared.fileURL(for: rawName),
+                        sourceHash: rawHash,
+                        byteCount: Int64(rawData?.count ?? 0),
+                        dimensions: CGSize(width: 4032, height: 3024)
+                    ))
+                }
+                if let hevcName = entry.hevcFilename, let hevcHash = entry.hevcSHA256 {
+                    sources.append(SourceResource(
+                        id: UUID(),
+                        shotID: entry.id,
+                        type: .hevcProcessed,
+                        sourceURL: await CaptureJournal.shared.fileURL(for: hevcName),
+                        sourceHash: hevcHash,
+                        byteCount: Int64(hevcData?.count ?? 0),
+                        dimensions: CGSize(width: 4032, height: 3024)
+                    ))
+                }
+                
+                let shot = Shot(
+                    id: entry.id,
+                    captureID: captureID,
+                    timestamp: entry.timestamp,
+                    sources: sources,
+                    currentRecipe: recipe,
+                    captureMetadata: captureMetadata ?? Shot.CaptureMetadata(
+                        temperature: 5500,
+                        tint: 0,
+                        iso: 100,
+                        exposureDuration: CMTime(value: 1, timescale: 60),
+                        sceneEV: 8.0,
+                        flashState: .auto,
+                        lensPosition: 0.5,
+                        orientation: 1
+                    )
+                )
+                
+                completion(.success(shot))
+            } catch {
+                completion(.failure(error))
+            }
         }
-        
-        let capturedPhoto = CapturedPhoto(
-            processedData: processedData,
-            rawData: rawData,
-            timestamp: Date(),
-            metadata: photo.metadata
-        )
-        
-        completion(.success(capturedPhoto))
     }
-}
-
-// MARK: - Captured photo model
-
-struct CapturedPhoto {
-    let processedData: Data
-    let rawData: Data?
-    let timestamp: Date
-    let metadata: [String: Any]
-}
-
-enum CaptureError: Error {
-    case noData
-    case sessionNotRunning
-    case deviceUnavailable
 }
