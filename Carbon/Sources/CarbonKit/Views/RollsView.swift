@@ -10,6 +10,8 @@ struct RollsView: View {
     @ObservedObject private var rollStore = RollStore.shared
     @StateObject private var library = LibraryStore()
     @State private var openedRoll: Roll?
+    @State private var recoveryReport: RecoveryReport?
+    @State private var showRecoverySheet = false
     
     var body: some View {
         NavigationStack {
@@ -53,6 +55,38 @@ struct RollsView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 4)
                         
+                        // R11: Recovery banner — only shown when something needs attention
+                        if let report = recoveryReport, report.needsUserAttention,
+                           let summary = report.summary {
+                            Button {
+                                showRecoverySheet = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(Color("Safelight"))
+                                    Text(summary)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(Color("Remjet"))
+                                        .multilineTextAlignment(.leading)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(Color("SecondaryInk"))
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(Color("Receipt").opacity(0.9))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color("Safelight").opacity(0.4), lineWidth: 0.5)
+                                )
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 24)
+                        }
+                        
                         // Empty state
                         if rollStore.rolls.isEmpty {
                             emptyState
@@ -75,6 +109,12 @@ struct RollsView: View {
         }
         .task {
             await library.loadJournal()
+            recoveryReport = await CaptureRecoveryAuditor.shared.audit()
+        }
+        .sheet(isPresented: $showRecoverySheet) {
+            if let report = recoveryReport {
+                RecoverySheet(report: report)
+            }
         }
         .fullScreenCover(item: $openedRoll) { roll in
             RollDetailView(
@@ -354,6 +394,104 @@ private struct FilmContactCell: View {
         .aspectRatio(1, contentMode: .fit)
         .task {
             image = PhotoThumbnailCache.shared.thumbnail(for: shot)
+        }
+    }
+}
+// MARK: - R11 Recovery sheet
+
+private struct RecoverySheet: View {
+    let report: RecoveryReport
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                if !report.recoverable.isEmpty {
+                    Section {
+                        ForEach(report.recoverable) { rec in
+                            recoveryRow(rec)
+                        }
+                    } header: {
+                        Text("Recovered — \(report.recoverable.count) photo\(report.recoverable.count == 1 ? "" : "s")")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundColor(Color("CarbonInk"))
+                    }
+                }
+                
+                if !report.interrupted.isEmpty {
+                    Section {
+                        ForEach(report.interrupted) { rec in
+                            recoveryRow(rec)
+                        }
+                    } header: {
+                        Text("Interrupted — tap to finish")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundColor(Color("Safelight"))
+                    }
+                }
+                
+                if !report.damaged.isEmpty || !report.missing.isEmpty {
+                    Section {
+                        ForEach(report.damaged + report.missing) { rec in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color("Safelight"))
+                                    Text(rec.captureID.prefix(8) + "…")
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundColor(Color("SecondaryInk"))
+                                    Spacer()
+                                    Text(rec.state.displayName)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(Color("Safelight"))
+                                }
+                                Text(rec.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(Color("SecondaryInk").opacity(0.7))
+                            }
+                        }
+                    } header: {
+                        Text("Unrecoverable")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundColor(Color("Safelight"))
+                    } footer: {
+                        Text("Originals were lost or corrupted by the system or another app. We kept the journal record for your records.")
+                            .font(.caption2)
+                            .foregroundColor(Color("SecondaryInk"))
+                    }
+                }
+            }
+            .navigationTitle("Recovery")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+    
+    @ViewBuilder
+    private func recoveryRow(_ rec: RecoveryRecord) -> some View {
+        HStack {
+            Image(systemName: rec.state == .intact ? "checkmark.seal" : "checkmark.seal.fill")
+                .font(.system(size: 12))
+                .foregroundColor(Color("CarbonInk"))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(rec.captureID.prefix(8) + "…")
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(Color("Remjet"))
+                Text(rec.timestamp.formatted(date: .abbreviated, time: .shortened))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(Color("SecondaryInk"))
+            }
+            Spacer()
+            Text(rec.state.displayName)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Color("SecondaryInk"))
         }
     }
 }

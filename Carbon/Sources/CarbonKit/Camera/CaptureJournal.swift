@@ -136,6 +136,20 @@ public actor CaptureJournal {
         return valid
     }
     
+    /// All committed entries regardless of file state (for auditor).
+    public func recoverAllEntries() throws -> [JournalEntry] {
+        guard fileManager.fileExists(atPath: journalURL.path) else { return [] }
+        let data = try Data(contentsOf: journalURL)
+        return try JSONDecoder().decode([JournalEntry].self, from: data)
+    }
+    
+    /// Entries written but not committed (interrupted before didFinishCapture).
+    public func uncommittedEntries() -> [JournalEntry] {
+        // Currently we write committed=true atomically, so this is always empty.
+        // Future: if two-phase write is added, return pending entries here.
+        return []
+    }
+    
     public nonisolated func fileURL(for filename: String) -> URL {
         baseDirectory.appendingPathComponent(filename)
     }
