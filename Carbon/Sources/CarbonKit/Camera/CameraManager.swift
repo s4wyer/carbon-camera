@@ -23,6 +23,7 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var activeFlashMode: AVCaptureDevice.FlashMode = .auto
     @Published var activeExposureEV: Float = 0.0
     @Published var activeWarmthK: Float = 0.0
+    @Published var activePreset: PresetDefinition = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
     
     // MARK: - Private state
     private var videoDeviceInput: AVCaptureDeviceInput?
@@ -207,6 +208,20 @@ final class CameraManager: NSObject, ObservableObject {
         case .off: activeFlashMode = .auto
         @unknown default: activeFlashMode = .auto
         }
+    }
+    
+    func setFlashMode(_ mode: AVCaptureDevice.FlashMode) {
+        activeFlashMode = mode
+    }
+    
+    /// Set the preset used for the next capture's recipe and render queue.
+    func setActivePreset(_ preset: PresetDefinition) {
+        activePreset = preset
+    }
+    
+    /// The preset snapshot the capture delegate should use.
+    var presetForCapture: PresetDefinition {
+        activePreset
     }
     
     // MARK: - Exposure & Warmth (U02, U03, R08)
@@ -407,10 +422,10 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         
         Task {
             do {
-                // Default recipe: Carbon Natural
-                let defaultPreset = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
+                // Recipe built from the currently selected preset (U12 film flap)
+                let defaultPreset = self.presetForCapture
                 let recipe = RecipeVersion(
-                    recipeID: "natural-v1",
+                    recipeID: defaultPreset.presetID,
                     presetDefinitionID: defaultPreset.id,
                     engineVersion: "1.0",
                     source: rawData != nil ? .rawBayer : .processedHEVC,

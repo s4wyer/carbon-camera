@@ -12,9 +12,11 @@ struct CameraView: View {
     
     // UI state
     @State private var selectedFocal: Double = 35.0
-    @State private var moodExposure: Float = 0.0 // -2.0 to +2.0 EV
-    @State private var warmthStep: Int = 1       // WARM 01..05
-    @State private var showPresetMenu = false
+    @State private var moodExposure: Float = 0.0
+    @State private var warmthStep: Int = 1
+    @State private var showFilmFlap = false
+    @State private var activePreset: PresetDefinition = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
+    @State private var flapFlashMode: FilmFlapView.FlashMode = .auto
     
     var body: some View {
         ZStack {
@@ -25,8 +27,8 @@ struct CameraView: View {
             VStack(spacing: 0) {
                 // Top header bar (over preview)
                 HStack {
-                    Button(action: { showPresetMenu = true }) {
-                        Text("NATURAL")
+                    Button(action: { showFilmFlap = true }) {
+                        Text(activePreset.displayName.uppercased())
                             .font(.system(size: 13, weight: .regular, design: .monospaced))
                             .foregroundColor(.white.opacity(0.9))
                             .tracking(1.5)
@@ -37,6 +39,10 @@ struct CameraView: View {
                     // Flash / Warmth toggle
                     HStack(spacing: 8) {
                         Button(action: {
+                            // Cycle through flash modes to stay in sync with flap
+                            let modes: [FilmFlapView.FlashMode] = [.auto, .on, .off]
+                            let idx = (modes.firstIndex(of: flapFlashMode) ?? 0 + 1) % 3
+                            flapFlashMode = modes[idx]
                             cameraManager.cycleFlashMode()
                         }) {
                             Image(systemName: flashIcon)
@@ -154,8 +160,23 @@ struct CameraView: View {
             cameraManager.stopSession()
             volumeObserver.stop()
         }
-        .sheet(isPresented: $showPresetMenu) {
-            PresetSelectorSheet()
+        .sheet(isPresented: $showFilmFlap) {
+            FilmFlapView(
+                activePreset: $activePreset,
+                flashMode: $flapFlashMode,
+                isPresented: $showFilmFlap
+            )
+        }
+        .onChange(of: flapFlashMode) { _, mode in
+            // Sync flash selection from flap to camera manager
+            switch mode {
+            case .auto: cameraManager.setFlashMode(.auto)
+            case .on:   cameraManager.setFlashMode(.on)
+            case .off:  cameraManager.setFlashMode(.off)
+            }
+        }
+        .onChange(of: activePreset) { _, newPreset in
+            cameraManager.setActivePreset(newPreset)
         }
     }
     
@@ -312,56 +333,4 @@ private struct RotaryMoodDial: View {
 
 // MARK: - Preset Selector Sheet (SET13b "Stolen Goods" Menu)
 
-private struct PresetSelectorSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            List {
-                Section(header: Text("Carbon Originals")) {
-                    ForEach(PresetLibrary.presets(in: .ours)) { preset in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(preset.displayName)
-                                    .font(.headline)
-                                Text(preset.description)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            if preset.displayOrder == 0 {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(Color("CarbonInk"))
-                            }
-                        }
-                    }
-                }
-                
-                Section(
-                    header: Text("Stolen Goods"),
-                    footer: Text("Recovered from other camera apps with cheeky attribution (D-024).")
-                ) {
-                    ForEach(PresetLibrary.presets(in: .stolen)) { preset in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(preset.displayNameWithAttribution)
-                                .font(.subheadline)
-                            if let attribution = preset.attributionText {
-                                Text(attribution)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Presets")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
+
