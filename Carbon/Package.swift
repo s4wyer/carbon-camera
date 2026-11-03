@@ -1,7 +1,6 @@
 // swift-tools-version: 6.0
-// SET01 — Reproducible native iOS project.
-// Baseline: iOS 18.0 (planning assumption validated in SET03), Swift 6.0, Xcode 16.
-// No third-party dependencies. Everything below is Apple SDK only.
+// Carbon Swift Package — used for testing only.
+// CI build uses XcodeGen + project.yml for the actual iOS app archive.
 import PackageDescription
 
 let package = Package(
@@ -11,28 +10,15 @@ let package = Package(
         .iOS(.v18)
     ],
     products: [
-        .library(name: "CarbonKit", targets: ["CarbonKit"]),
-        .executable(name: "carbon-verify", targets: ["CarbonVerify"])
+        .library(name: "CarbonKit", targets: ["CarbonKit"])
     ],
     targets: [
         .target(
             name: "CarbonKit",
             path: "Sources/CarbonKit",
-            resources: [
-                .copy("Resources/presets.json"),
-                .copy("Resources/camera-default-config.json")
-            ],
             swiftSettings: [
-                .enableUpcomingFeature("BareSlashRegexLiterals"),
-                .unsafeFlags(["-strict-concurrency=complete"], .when(configuration: .debug))
+                .enableUpcomingFeature("BareSlashRegexLiterals")
             ]
-        ),
-        // Host-side (macOS/Linux) verifier. Runs the deterministic pipeline math
-        // without AVFoundation so CI can check contract and recipe reproducibility.
-        .executableTarget(
-            name: "CarbonVerify",
-            dependencies: ["CarbonKit"],
-            path: "Sources/CarbonVerify"
         ),
         .testTarget(
             name: "CarbonKitTests",
