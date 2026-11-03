@@ -1,0 +1,110 @@
+name: Build Carbon IPA
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_16.0.app/Contents/Developer
+  
+jobs:
+  build:
+    name: Build iOS IPA
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.0'
+          
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+          
+      - name: Generate Xcode project
+        run: |
+          cd Carbon
+          xcodegen generate
+          
+      - name: Install dependencies
+        run: |
+          # No CocoaPods/Carthage; Swift Package Manager only
+          cd Carbon
+          # SPM resolves automatically during build now
+          echo "Dependencies will resolve during build"
+          
+      - name: Run Swift tests
+        run: |
+          cd Carbon
+          swift test --enable-code-coverage
+          
+      - name: Build Carbon framework
+        run: |
+          cd Carbon
+          swift build -c release --arch arm64 --sdk iphoneos
+          
+      - name: Build and archive IPA
+        run: |
+          cd Carbon
+          
+          # Create the Xcode archive
+          xcodebuild archive \
+            -project Carbon.xcodeproj \
+            -scheme Carbon \
+            -destination 'generic/platform=iOS' \
+            -archivePath ./build/Carbon.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM=""
+            
+          # Export unsigned IPA (no provisioning profile in CI)
+          xcodebuild -exportArchive \
+            -archivePath ./build/Carbon.xcarchive \
+            -exportPath ./build \
+            -exportOptionsPlist ../ci/ExportOptions.plist
+            
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-unsigned.ipa
+          path: Carbon/build/*.ipa
+          retention-days: 14
+          
+      - name: Upload dSYMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-dSYMs
+          path: Carbon/build/Carbon.xcarchive/dSYMs/
+          retention-days: 14
+          
+  verify-pipeline:
+    name: Verify render pipeline math
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Run pipeline verification
+        run: |
+          python verify_pipeline.py
+          
+      - name: Check for TODO/FIXME
+        run: |
+          if grep -r "FIXME\|TODO\|XXX\|HACK" Carbon/Sources --exclude-dir=.build; then
+            echo "::warning::Found TODO/FIXME markers in source"
+          fi

@@ -1,0 +1,14 @@
+{
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  },
+  "colors" : [
+    { "filename" : "Remjet.colorset", "idiom" : "universal" },
+    { "filename" : "Receipt.colorset", "idiom" : "universal" },
+    { "filename" : "CarbonInk.colorset", "idiom" : "universal" },
+    { "filename" : "Safelight.colorset", "idiom" : "universal" },
+    { "filename" : "Brass.colorset", "idiom" : "universal" },
+    { "filename" : "SecondaryInk.colorset", "idiom" : "universal" }
+  ]
+}
