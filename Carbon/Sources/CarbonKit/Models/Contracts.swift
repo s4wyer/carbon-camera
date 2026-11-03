@@ -272,14 +272,14 @@ public struct DevelopmentJob: Codable, Identifiable {
 }
 
 /// Immutable preset definition. Sourced from Halide, Lapse, or No Fusion (cited); or marked original with rationale.
-public struct PresetDefinition: Codable, Identifiable {
+public struct PresetDefinition: Codable, Identifiable, Equatable {
     public let id: UUID
     public let presetID: String  // e.g., "halide-zephyr", "nofusion-nn", "carbon-natural"
     public let displayName: String  // Plain language, predicted-by-user rule
     public let description: String  // One sentence, one obvious promise
     public let source: PresetSource
     
-    public enum PresetSource: Codable {
+    public enum PresetSource: Codable, Equatable {
         case halideReference(lookName: String, section: String)  // e.g. "zephyr", "H§2"
         case lapseReference(factoryName: String, section: String)  // e.g. "journal", "L§5"
         case nofusionReference(presetFileID: String, section: String)  // e.g. "NN", "N§3"
@@ -290,7 +290,7 @@ public struct PresetDefinition: Codable, Identifiable {
     public let baseParameters: PresetParameters
     
     /// Our deltas from base (empty if = original).
-    public struct Delta: Codable {
+    public struct Delta: Codable, Equatable {
         public let field: String
         public let originalValue: Float
         public let carbonValue: Float

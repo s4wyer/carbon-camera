@@ -220,11 +220,6 @@ final class CameraManager: NSObject, ObservableObject {
         activePreset = preset
     }
     
-    /// The preset snapshot the capture delegate should use.
-    var presetForCapture: PresetDefinition {
-        activePreset
-    }
-    
     // MARK: - Exposure & Warmth (U02, U03, R08)
     
     func setExposureBias(_ ev: Float) {
@@ -291,7 +286,8 @@ final class CameraManager: NSObject, ObservableObject {
             
             let delegate = PhotoCaptureDelegate(
                 captureID: captureID,
-                flashMode: self.activeFlashMode
+                flashMode: self.activeFlashMode,
+                preset: self.activePreset
             ) { [weak self] result in
                 guard let self = self else { return }
                 Task { @MainActor in
@@ -332,11 +328,10 @@ final class CameraManager: NSObject, ObservableObject {
                     ]
                 ]
             )
-            
-            // C03A: In low light, enable low-light boost on the RAW path
-            if isLowLight {
-                settings.isLowLightEnhanced = true
-            }
+
+            // C03A: Low light — photoQualityPrioritization .quality (below) enables
+            // the system's low-light capture path automatically on supported devices.
+            _ = isLowLight
         } else {
             // Fallback: HEVC only
             settings = AVCapturePhotoSettings(format: [
@@ -370,7 +365,8 @@ final class CameraManager: NSObject, ObservableObject {
                 
                 let delegate = PhotoCaptureDelegate(
                     captureID: captureID,
-                    flashMode: self.activeFlashMode
+                    flashMode: self.activeFlashMode,
+                    preset: self.activePreset
                 ) { [weak self] result in
                     guard let self = self else { return }
                     Task { @MainActor in
@@ -394,6 +390,7 @@ final class CameraManager: NSObject, ObservableObject {
 private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     private let captureID: String
     private let requestedFlashMode: AVCaptureDevice.FlashMode
+    private let capturePreset: PresetDefinition
     private let completion: (Result<Shot, Error>) -> Void
     
     private var rawData: Data?
@@ -403,10 +400,12 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     init(
         captureID: String,
         flashMode: AVCaptureDevice.FlashMode,
+        preset: PresetDefinition,
         completion: @escaping (Result<Shot, Error>) -> Void
     ) {
         self.captureID = captureID
         self.requestedFlashMode = flashMode
+        self.capturePreset = preset
         self.completion = completion
     }
     
@@ -467,7 +466,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         Task {
             do {
                 // Recipe built from the currently selected preset (U12 film flap)
-                let defaultPreset = self.presetForCapture
+                let defaultPreset = self.capturePreset
                 let recipe = RecipeVersion(
                     recipeID: defaultPreset.presetID,
                     presetDefinitionID: defaultPreset.id,
