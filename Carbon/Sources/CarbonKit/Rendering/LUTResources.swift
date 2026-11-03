@@ -42,29 +42,38 @@ public class LUTResources {
     private func loadFromBundle(lutID: String) throws -> LUTData {
         // Halide LUTs: "halide-{look}-sdr" → "Resources/LUTs/halide/{Look}SDR.ccube"
         if lutID.hasPrefix("halide-") {
-            let filename = lutID
-                .replacingOccurrences(of: "halide-", with: "")
-                .replacingOccurrences(of: "-sdr", with: "SDR")
-                .replacingOccurrences(of: "-hdr", with: "HDR")
-                .replacingOccurrences(of: "-", with: "")
-                .capitalizingFirstLetter()
-            
-            // Special cases
-            let ccubeFilename: String
-            if lutID == "halide-process-zero-sdr" {
-                ccubeFilename = "p0sdr"
-            } else if lutID == "halide-process-zero-hdr" {
-                ccubeFilename = "p0hdr"
-            } else if lutID.contains("zephyr") {
-                ccubeFilename = filename.replacingOccurrences(of: "Zephyr", with: "ZephyrDisplayP3")
-            } else if lutID.contains("valencia") {
-                ccubeFilename = filename.replacingOccurrences(of: "Valencia", with: "ValenciaDisplayP3")
-            } else if lutID.contains("chroma-noir-scene") {
-                ccubeFilename = filename.replacingOccurrences(of: "Chromanoir", with: "ChromaNoirScene")
-            } else if lutID.contains("chroma-noir-display") {
-                ccubeFilename = filename.replacingOccurrences(of: "Chromanoir", with: "ChromaNoirDisplay")
-            } else {
-                ccubeFilename = filename
+            // Explicit map from preset lutID to bundled .ccube basename.
+            // A transform chain proved fragile (e.g. chroma-noir-display); this
+            // table is the single source of truth for Halide file resolution.
+            let halideMap: [String: String] = [
+                "halide-process-zero-sdr": "p0sdr",
+                "halide-process-zero-hdr": "p0hdr",
+                "halide-nova-sdr": "NovaSDR",
+                "halide-nova-hdr": "NovaHDR",
+                "halide-zephyr-sdr": "ZephyrDisplayP3SDR",
+                "halide-zephyr-hdr": "ZephyrDisplayP3HDR",
+                "halide-rembrandt-sdr": "RembrandtSDR",
+                "halide-rembrandt-hdr": "RembrandtHDR",
+                "halide-scarlet-sdr": "ScarletSDR",
+                "halide-scarlet-hdr": "ScarletHDR",
+                "halide-valencia-sdr": "ValenciaDisplayP3SDR",
+                "halide-valencia-hdr": "ValenciaDisplayP3HDR",
+                "halide-quicksilver-sdr": "QuicksilverSDR",
+                "halide-quicksilver-hdr": "QuicksilverHDR",
+                "halide-dawn-sdr": "DawnSDR",
+                "halide-dawn-hdr": "DawnHDR",
+                "halide-elysia-sdr": "ElysiaSDR",
+                "halide-elysia-hdr": "ElysiaHDR",
+                "halide-onyx-sdr": "OnyxSDR",
+                "halide-onyx-hdr": "OnyxHDR",
+                "halide-chroma-noir-scene-sdr": "ChromaNoirSceneSDR",
+                "halide-chroma-noir-scene-hdr": "ChromaNoirSceneHDR",
+                "halide-chroma-noir-display-sdr": "ChromaNoirDisplaySDR",
+                "halide-chroma-noir-display-hdr": "ChromaNoirDisplayHDR",
+            ]
+
+            guard let ccubeFilename = halideMap[lutID] else {
+                throw LUTError.resourceNotFound("halide/\(lutID) (no entry in halideMap)")
             }
             
             guard let url = Bundle.main.url(forResource: ccubeFilename, withExtension: "ccube", subdirectory: "LUTs/halide") else {
@@ -102,11 +111,5 @@ public class LUTResources {
         }
         
         throw LUTError.resourceNotFound(lutID)
-    }
-}
-
-private extension String {
-    func capitalizingFirstLetter() -> String {
-        return prefix(1).uppercased() + dropFirst()
     }
 }
