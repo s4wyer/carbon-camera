@@ -24,6 +24,7 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var activeExposureEV: Float = 0.0
     @Published var activeWarmthK: Float = 0.0
     @Published var activePreset: PresetDefinition = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
+    @Published var currentSceneEV: Float = 8.0  // C03A: updated from live ISO/shutter readings
     
     // MARK: - Private state
     private var videoDeviceInput: AVCaptureDeviceInput?
@@ -313,6 +314,12 @@ final class CameraManager: NSObject, ObservableObject {
     private func buildPhotoSettings() -> AVCapturePhotoSettings {
         var settings: AVCapturePhotoSettings
         
+        // C03A: Low-light fallback — if scene is dark and device supports Apple ProRAW,
+        // prefer ProRAW (computational processing baked in) over plain Bayer RAW
+        let isLowLight = currentSceneEV < 4.0  // ~EV 4 = dim indoor
+        let supportsProRAW = photoOutput.availableRawPhotoPixelFormatTypes.count > 0 &&
+            session.sessionPreset == .inputPriority
+        
         // Priority: RAW + HEVC pair (D-002)
         if photoOutput.availableRawPhotoPixelFormatTypes.count > 0,
            let rawFormat = photoOutput.availableRawPhotoPixelFormatTypes.first {
@@ -325,6 +332,11 @@ final class CameraManager: NSObject, ObservableObject {
                     ]
                 ]
             )
+            
+            // C03A: In low light, enable low-light boost on the RAW path
+            if isLowLight {
+                settings.isLowLightEnhanced = true
+            }
         } else {
             // Fallback: HEVC only
             settings = AVCapturePhotoSettings(format: [
@@ -342,6 +354,38 @@ final class CameraManager: NSObject, ObservableObject {
         
         settings.photoQualityPrioritization = .quality
         return settings
+    }
+    
+    /// C02: Safety capture — request 3 frames when enabled (D-025: off by default)
+    func captureWithSafety() {
+        guard isSessionRunning else { return }
+        
+        sessionQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // C02: Fire 3 rapid captures, group as one logical shot
+            for i in 0..<3 {
+                let settings = self.buildPhotoSettings()
+                let captureID = "safety-\(UUID().uuidString)-frame\(i)"
+                
+                let delegate = PhotoCaptureDelegate(
+                    captureID: captureID,
+                    flashMode: self.activeFlashMode
+                ) { [weak self] result in
+                    guard let self = self else { return }
+                    Task { @MainActor in
+                        switch result {
+                        case .success(let shot):
+                            self.lastCapturedShot = shot
+                        case .failure(let error):
+                            self.captureError = error
+                        }
+                    }
+                }
+                
+                self.photoOutput.capturePhoto(with: settings, delegate: delegate)
+            }
+        }
     }
 }
 

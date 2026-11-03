@@ -3,12 +3,14 @@
 
 import SwiftUI
 import AVFoundation
+import CoreMotion
 
 /// 02 CAMERA: Photo-first viewfinder with tactile shutter, prime selector, and rotary MOOD dial
 struct CameraView: View {
     @ObservedObject var coordinator: AppCoordinator
     @StateObject private var cameraManager = CameraManager()
     @StateObject private var volumeObserver = VolumeButtonObserver()
+    @StateObject private var levelDetector = LevelDetector()
     
     // UI state
     @State private var selectedFocal: Double = 35.0
@@ -78,8 +80,14 @@ struct CameraView: View {
                             cameraManager.setFocusAndExposure(at: location)
                         }
                     
-                    // Corner brightlines (U07)
+                    // Corner brightlines (U07) + Level indicator (U06)
                     CornerBrightlinesView()
+                    if levelDetector.isLevel {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.7))
+                            .frame(width: 20, height: 1)
+                            .transition(.opacity)
+                    }
                 }
                 .aspectRatio(3.0 / 4.0, contentMode: .fit)
                 .padding(.horizontal, 16)
@@ -155,10 +163,12 @@ struct CameraView: View {
             cameraManager.startSession()
             volumeObserver.onShutterPress = { triggerShutter() }
             volumeObserver.start()
+            levelDetector.start()
         }
         .onDisappear {
             cameraManager.stopSession()
             volumeObserver.stop()
+            levelDetector.stop()
         }
         .sheet(isPresented: $showFilmFlap) {
             FilmFlapView(

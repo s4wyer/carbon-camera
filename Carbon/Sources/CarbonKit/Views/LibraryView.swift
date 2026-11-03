@@ -277,6 +277,8 @@ final class LibraryStore: ObservableObject {
     @Published var sections: [DaySection] = []
     @Published var pickIDs: Set<UUID> = []
     
+    var shots: [Shot] { sections.flatMap(\.shots) }
+    
     func loadJournal() async {
         do {
             let entries = try await CaptureJournal.shared.recoverAll()
