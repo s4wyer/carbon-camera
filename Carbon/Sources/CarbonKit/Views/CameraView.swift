@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import UIKit
 
 /// 02 CAMERA: Full-screen camera with controls matching reference mockup
 struct CameraView: View {
@@ -65,7 +66,7 @@ struct CameraView: View {
                         ForEach(FocalLength.allCases, id: \.self) { focal in
                             Button(action: {
                                 selectedFocalLength = focal
-                                cameraManager.setZoom(for: focal)
+                                cameraManager.setZoom(for: Double(focal.rawValue)!)
                             }) {
                                 Text(focal.rawValue)
                                     .font(.system(size: 15, weight: .medium))
@@ -227,27 +228,5 @@ private struct MoodDialView: View {
                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                 .foregroundColor(.white.opacity(0.6))
         }
-    }
-}
-
-/// Minimal camera manager (scaffold)
-@MainActor
-private class CameraManager: ObservableObject {
-    let session = AVCaptureSession()
-    
-    func startSession() {
-        // Will configure AVCaptureSession on device
-    }
-    
-    func stopSession() {
-        session.stopRunning()
-    }
-    
-    func setZoom(for focal: CameraView.FocalLength) {
-        // Zoom ramp logic (D-025 / C10)
-    }
-    
-    func capturePhoto() {
-        // Capture logic
     }
 }

@@ -3,6 +3,7 @@
 // See docs/decisions/D-002 through D-023 for derivation and authority.
 
 import Foundation
+import CoreMedia
 
 // MARK: - Immutable records (SET02)
 
@@ -29,6 +30,52 @@ public struct Shot: Codable, Identifiable {
         public let flashState: FlashState
         public let lensPosition: Float  // 0.0 to 1.0
         public let orientation: Int  // EXIF orientation 1–8
+        public init(temperature: Float, tint: Float, iso: Float, exposureDuration: CMTime,
+                    sceneEV: Float, flashState: FlashState, lensPosition: Float, orientation: Int) {
+            self.temperature = temperature
+            self.tint = tint
+            self.iso = iso
+            self.exposureDuration = exposureDuration
+            self.sceneEV = sceneEV
+            self.flashState = flashState
+            self.lensPosition = lensPosition
+            self.orientation = orientation
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case temperature
+            case tint
+            case iso
+            case exposureDuration
+            case sceneEV
+            case flashState
+            case lensPosition
+            case orientation
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.temperature = try container.decode(Float.self, forKey: .temperature)
+            self.tint = try container.decode(Float.self, forKey: .tint)
+            self.iso = try container.decode(Float.self, forKey: .iso)
+            self.exposureDuration = try container.decode(CMTime.self, forKey: .exposureDuration)
+            self.sceneEV = try container.decode(Float.self, forKey: .sceneEV)
+            self.flashState = try container.decode(FlashState.self, forKey: .flashState)
+            self.lensPosition = try container.decode(Float.self, forKey: .lensPosition)
+            self.orientation = try container.decode(Int.self, forKey: .orientation)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(temperature, forKey: .temperature)
+            try container.encode(tint, forKey: .tint)
+            try container.encode(iso, forKey: .iso)
+            try container.encode(exposureDuration, forKey: .exposureDuration)
+            try container.encode(sceneEV, forKey: .sceneEV)
+            try container.encode(flashState, forKey: .flashState)
+            try container.encode(lensPosition, forKey: .lensPosition)
+            try container.encode(orientation, forKey: .orientation)
+        }
     }
     public let captureMetadata: CaptureMetadata
     
@@ -152,6 +199,7 @@ public struct RecipeVersion: Codable, Identifiable {
         self.source = source
         self.parameters = parameters
         self.grainSeed = grainSeed
+        self.crop = nil
         self.isEditable = isEditable
     }
 }
@@ -239,7 +287,7 @@ public struct PresetDefinition: Codable, Identifiable {
     }
     
     /// Base parameters from the reference, or neutral defaults if original.
-    public let baseParameters: RecipeVersion.Parameters
+    public let baseParameters: PresetParameters
     
     /// Our deltas from base (empty if = original).
     public struct Delta: Codable {
@@ -248,7 +296,7 @@ public struct PresetDefinition: Codable, Identifiable {
         public let carbonValue: Float
         public let rationale: String  // Why we changed it
     }
-    public let carbonDeltas: [Delta] = []
+    public let carbonDeltas: [Delta]
     
     /// Rendering engine version at creation (for reproducibility).
     public let engineVersion: String
@@ -261,7 +309,8 @@ public struct PresetDefinition: Codable, Identifiable {
                 displayName: String,
                 description: String,
                 source: PresetSource,
-                baseParameters: RecipeVersion.Parameters,
+                baseParameters: PresetParameters,
+                carbonDeltas: [Delta] = [],
                 engineVersion: String,
                 displayOrder: Int) {
         self.id = id
@@ -270,6 +319,7 @@ public struct PresetDefinition: Codable, Identifiable {
         self.description = description
         self.source = source
         self.baseParameters = baseParameters
+        self.carbonDeltas = carbonDeltas
         self.engineVersion = engineVersion
         self.displayOrder = displayOrder
     }
@@ -364,6 +414,86 @@ public struct CameraDefaultConfig: Codable {
         self.defaultPrimeFocalLengthMM = defaultPrimeFocalLengthMM
         self.disableRAWSharpening = disableRAWSharpening
         self.defaultPresetID = defaultPresetID
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case sessionPreset
+        case usesApplicationAudioSession
+        case automaticallyConfiguresApplicationAudioSession
+        case automaticallyConfiguresCaptureDeviceForWideColor
+        case configuresApplicationAudioSessionToMixWithOthers
+        case focusPointX
+        case focusPointY
+        case focusModeAutomatic
+        case exposureModeAutomatic
+        case automaticallyEnablesLowLightBoost
+        case isSmoothAutoFocusEnabled
+        case isSubjectAreaChangeMonitoringEnabled
+        case activeVideoMinFrameDuration
+        case activeVideoMaxFrameDuration
+        case initialVideoZoomFactor
+        case maxVideoZoomFactor
+        case isDepthDataDeliveryEnabled
+        case isLivePhotoCaptureEnabled
+        case maxPhotoQualityPrioritization
+        case defaultFlashState
+        case defaultPrimeFocalLengthMM
+        case disableRAWSharpening
+        case defaultPresetID
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.sessionPreset = try container.decode(String.self, forKey: .sessionPreset)
+        self.usesApplicationAudioSession = try container.decode(Bool.self, forKey: .usesApplicationAudioSession)
+        self.automaticallyConfiguresApplicationAudioSession = try container.decode(Bool.self, forKey: .automaticallyConfiguresApplicationAudioSession)
+        self.automaticallyConfiguresCaptureDeviceForWideColor = try container.decode(Bool.self, forKey: .automaticallyConfiguresCaptureDeviceForWideColor)
+        self.configuresApplicationAudioSessionToMixWithOthers = try container.decode(Bool.self, forKey: .configuresApplicationAudioSessionToMixWithOthers)
+        self.focusPointX = try container.decode(Float.self, forKey: .focusPointX)
+        self.focusPointY = try container.decode(Float.self, forKey: .focusPointY)
+        self.focusModeAutomatic = try container.decode(Bool.self, forKey: .focusModeAutomatic)
+        self.exposureModeAutomatic = try container.decode(Bool.self, forKey: .exposureModeAutomatic)
+        self.automaticallyEnablesLowLightBoost = try container.decode(Bool.self, forKey: .automaticallyEnablesLowLightBoost)
+        self.isSmoothAutoFocusEnabled = try container.decode(Bool.self, forKey: .isSmoothAutoFocusEnabled)
+        self.isSubjectAreaChangeMonitoringEnabled = try container.decode(Bool.self, forKey: .isSubjectAreaChangeMonitoringEnabled)
+        self.activeVideoMinFrameDuration = try container.decode(CMTime.self, forKey: .activeVideoMinFrameDuration)
+        self.activeVideoMaxFrameDuration = try container.decode(CMTime.self, forKey: .activeVideoMaxFrameDuration)
+        self.initialVideoZoomFactor = try container.decode(Float.self, forKey: .initialVideoZoomFactor)
+        self.maxVideoZoomFactor = try container.decode(Float.self, forKey: .maxVideoZoomFactor)
+        self.isDepthDataDeliveryEnabled = try container.decode(Bool.self, forKey: .isDepthDataDeliveryEnabled)
+        self.isLivePhotoCaptureEnabled = try container.decode(Bool.self, forKey: .isLivePhotoCaptureEnabled)
+        self.maxPhotoQualityPrioritization = try container.decode(String.self, forKey: .maxPhotoQualityPrioritization)
+        self.defaultFlashState = try container.decode(String.self, forKey: .defaultFlashState)
+        self.defaultPrimeFocalLengthMM = try container.decode(Float.self, forKey: .defaultPrimeFocalLengthMM)
+        self.disableRAWSharpening = try container.decode(Bool.self, forKey: .disableRAWSharpening)
+        self.defaultPresetID = try container.decode(UUID.self, forKey: .defaultPresetID)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sessionPreset, forKey: .sessionPreset)
+        try container.encode(usesApplicationAudioSession, forKey: .usesApplicationAudioSession)
+        try container.encode(automaticallyConfiguresApplicationAudioSession, forKey: .automaticallyConfiguresApplicationAudioSession)
+        try container.encode(automaticallyConfiguresCaptureDeviceForWideColor, forKey: .automaticallyConfiguresCaptureDeviceForWideColor)
+        try container.encode(configuresApplicationAudioSessionToMixWithOthers, forKey: .configuresApplicationAudioSessionToMixWithOthers)
+        try container.encode(focusPointX, forKey: .focusPointX)
+        try container.encode(focusPointY, forKey: .focusPointY)
+        try container.encode(focusModeAutomatic, forKey: .focusModeAutomatic)
+        try container.encode(exposureModeAutomatic, forKey: .exposureModeAutomatic)
+        try container.encode(automaticallyEnablesLowLightBoost, forKey: .automaticallyEnablesLowLightBoost)
+        try container.encode(isSmoothAutoFocusEnabled, forKey: .isSmoothAutoFocusEnabled)
+        try container.encode(isSubjectAreaChangeMonitoringEnabled, forKey: .isSubjectAreaChangeMonitoringEnabled)
+        try container.encode(activeVideoMinFrameDuration, forKey: .activeVideoMinFrameDuration)
+        try container.encode(activeVideoMaxFrameDuration, forKey: .activeVideoMaxFrameDuration)
+        try container.encode(initialVideoZoomFactor, forKey: .initialVideoZoomFactor)
+        try container.encode(maxVideoZoomFactor, forKey: .maxVideoZoomFactor)
+        try container.encode(isDepthDataDeliveryEnabled, forKey: .isDepthDataDeliveryEnabled)
+        try container.encode(isLivePhotoCaptureEnabled, forKey: .isLivePhotoCaptureEnabled)
+        try container.encode(maxPhotoQualityPrioritization, forKey: .maxPhotoQualityPrioritization)
+        try container.encode(defaultFlashState, forKey: .defaultFlashState)
+        try container.encode(defaultPrimeFocalLengthMM, forKey: .defaultPrimeFocalLengthMM)
+        try container.encode(disableRAWSharpening, forKey: .disableRAWSharpening)
+        try container.encode(defaultPresetID, forKey: .defaultPresetID)
     }
 }
 

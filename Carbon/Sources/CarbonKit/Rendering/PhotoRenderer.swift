@@ -1,12 +1,13 @@
 import Metal
 import MetalKit
 import CoreImage
+import Combine
 import os.log
 
 /// Photo renderer: Applies ToneChain preset pipeline to captured RAW+HEVC photos
 /// Implements D-005 render order with Metal compute shaders for real-time performance
 @MainActor
-final class PhotoRenderer: NSObject, ObservableObject {
+final class PhotoRenderer: ObservableObject {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let ciContext: CIContext
@@ -18,15 +19,14 @@ final class PhotoRenderer: NSObject, ObservableObject {
     init?() {
         guard let device = MTLCreateSystemDefaultDevice(),
               let commandQueue = device.makeCommandQueue() else {
-            logger.error("Failed to create Metal device/queue")
+            Logger(subsystem: "app.carbon", category: "PhotoRenderer")
+                .error("Failed to create Metal device/queue")
             return nil
         }
         
         self.device = device
         self.commandQueue = commandQueue
         self.ciContext = CIContext(mtlDevice: device)
-        
-        super.init()
         
         setupPipeline()
     }
@@ -62,13 +62,17 @@ final class PhotoRenderer: NSObject, ObservableObject {
         let outputData = try await encodeOutput(processedImage)
         
         // Create render revision
+        let revisionID = UUID()
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("(revisionID.uuidString).heic")
+        try outputData.write(to: outputURL, options: .atomic)
         let revision = RenderRevision(
-            id: UUID().uuidString,
-            shotID: shot.id,
-            recipeVersionID: preset.id + "-v1",  // TODO: proper versioning
-            renderTimestamp: Date(),
-            outputResourceID: UUID().uuidString,  // TODO: save to storage
-            renderTimeMs: 0  // TODO: measure
+            id: revisionID,
+            recipeVersionID: shot.currentRecipe.id,
+            outputFormat: .heif,
+            outputURL: outputURL,
+            outputHash: "",  // TODO SET04: hash encoded output before persistence
+            renderingEngine: "ci-fallback"
         )
         
         logger.info("Render complete: revision=\(revision.id)")
@@ -107,8 +111,8 @@ final class PhotoRenderer: NSObject, ObservableObject {
         // 2. RAW decode - input is already decoded CIImage
         
         // 3. Shoulder (highlight rolloff)
-        if parameters.highlights != 0.0 {
-            image = applyHighlightRolloff(to: image, amount: parameters.highlights)
+        if parameters.curveHighlight != 0.0 {
+            image = applyHighlightRolloff(to: image, amount: parameters.curveHighlight)
         }
         
         // 4. Halation (glow around highlights)
@@ -121,11 +125,11 @@ final class PhotoRenderer: NSObject, ObservableObject {
         }
         
         // 5. Bloom (bright-region glow)
-        if parameters.bloomIntensity > 0.0 {
+        if parameters.bloomAmount > 0.0 {
             image = applyBloom(
                 to: image,
                 radius: parameters.bloomRadius,
-                intensity: parameters.bloomIntensity
+                intensity: parameters.bloomAmount
             )
         }
         
@@ -140,11 +144,11 @@ final class PhotoRenderer: NSObject, ObservableObject {
         }
         
         // 8. Temperature & Tint
-        if parameters.temperatureShift != 0 || parameters.tintShift != 0 {
+        if parameters.temperatureOffsetK != 0 || parameters.tintOffset != 0 {
             image = applyWhiteBalance(
                 to: image,
-                temperature: parameters.temperatureShift,
-                tint: parameters.tintShift
+                temperature: parameters.temperatureOffsetK,
+                tint: parameters.tintOffset
             )
         }
         
@@ -158,8 +162,9 @@ final class PhotoRenderer: NSObject, ObservableObject {
         }
         
         // 10. Curve (custom tone curve)
-        if let curve = parameters.curve {
-            image = applyCurve(to: image, curve: curve)
+        if parameters.curveBlack != 0 || parameters.curveShadow != 0 ||
+           parameters.curveMidtone != 0 || parameters.curveHighlight != 0 || parameters.curveWhite != 0 {
+            image = applyCurve(to: image, parameters: parameters)
         }
         
         // 11. Vibrance (smart saturation)
@@ -168,15 +173,15 @@ final class PhotoRenderer: NSObject, ObservableObject {
         }
         
         // 12. HSL adjustments (hue/sat/lum per color)
-        if !parameters.hslAdjustments.isEmpty {
-            image = applyHSLAdjustments(to: image, adjustments: parameters.hslAdjustments)
+        if !parameters.hsl.isEmpty {
+            image = applyHSLAdjustments(to: image, adjustments: parameters.hsl)
         }
         
         // 13. Grain (film texture)
-        if parameters.grainIntensity > 0.0 {
+        if parameters.grainAmount > 0.0 {
             image = applyGrain(
                 to: image,
-                intensity: parameters.grainIntensity,
+                intensity: parameters.grainAmount,
                 size: parameters.grainSize
             )
         }
@@ -195,7 +200,7 @@ final class PhotoRenderer: NSObject, ObservableObject {
         return filter.outputImage ?? image
     }
     
-    private func applyWhiteBalance(to image: CIImage, temperature: Int, tint: Int) -> CIImage {
+    private func applyWhiteBalance(to image: CIImage, temperature: Float, tint: Float) -> CIImage {
         let filter = CIFilter(name: "CITemperatureAndTint")!
         filter.setValue(image, forKey: kCIInputImageKey)
         
@@ -264,7 +269,7 @@ final class PhotoRenderer: NSObject, ObservableObject {
         return filter.outputImage ?? image
     }
     
-    private func applyCurve(to image: CIImage, curve: ToneCurve) -> CIImage {
+    private func applyCurve(to image: CIImage, parameters: PresetParameters) -> CIImage {
         // TODO: Implement custom curve with CIColorCurves or Metal shader
         logger.warning("Custom curve not yet implemented")
         return image
@@ -289,11 +294,8 @@ final class PhotoRenderer: NSObject, ObservableObject {
         guard var grain = grainFilter.outputImage else { return image }
         
         // Scale grain to match image size
-        let scaleFilter = CIFilter(name: "CIAffineTransform")!
         let transform = CGAffineTransform(scaleX: CGFloat(size), y: CGFloat(size))
-        scaleFilter.setValue(grain, forKey: kCIInputImageKey)
-        scaleFilter.setValue(NSValue(cgAffineTransform: transform), forKey: kCIInputTransformKey)
-        grain = scaleFilter.outputImage ?? grain
+        grain = grain.transformed(by: transform)
         
         // Crop to image extent
         grain = grain.cropped(to: image.extent)
@@ -323,9 +325,9 @@ final class PhotoRenderer: NSObject, ObservableObject {
     }
     
     private func encodeOutput(_ image: CIImage) async throws -> Data {
-        // TODO SET04: Encode to HEVC with proper quality settings
-        logger.warning("Output encoding not yet implemented")
-        return Data()
+        // TODO SET04: Encode to HEVC with proper quality settings.
+        // Never report an empty placeholder as a successful render.
+        throw RenderError.encodingFailed
     }
 }
 

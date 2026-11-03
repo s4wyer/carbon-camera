@@ -91,8 +91,8 @@ Where the three reference documents disagree, the decision is recorded in `docs/
 ## Next steps (when on Mac)
 
 1. Transfer this repository to Mac with Xcode 16+.
-2. Run `swift build` in `Carbon/`; fix any missing-framework imports.
-3. Run `swift test` to validate contract serialization and pipeline math.
+2. In `Carbon/`, run `xcodegen generate` (install XcodeGen with `brew install xcodegen`).
+3. Run `xcodebuild test -project Carbon.xcodeproj -scheme Carbon -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO` to validate contract serialization and pipeline math. Choose an installed iPhone simulator if that device is unavailable. Plain `swift test` targets the macOS host and cannot compile the iOS camera/UI code.
 4. Complete SET02 verification (contracts frozen and compilable).
 5. Complete SET03 (device capability measurement on physical iPhone).
 6. Complete SET04 (durable capture and recovery).

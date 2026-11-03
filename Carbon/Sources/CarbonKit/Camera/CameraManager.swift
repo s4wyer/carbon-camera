@@ -1,10 +1,11 @@
 import AVFoundation
+import Combine
 import Photos
 import os.log
 
 /// Camera manager: AVFoundation session, capture, and device configuration
 /// Implements D-002 baseline (Lapse camera config) with overrides
-@MainActor
+// Capture work runs on sessionQueue; published results are delivered on MainActor.
 final class CameraManager: NSObject, ObservableObject {
     // MARK: - Published state
     @Published var session = AVCaptureSession()

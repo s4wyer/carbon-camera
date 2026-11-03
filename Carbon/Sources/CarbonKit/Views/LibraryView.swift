@@ -56,8 +56,10 @@ struct LibraryView: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 24, pinnedViews: .sectionHeaders) {
                             ForEach(libraryManager.sections) { section in
-                                Section(header: SectionHeader(title: section.title)) {
+                                Section {
                                     PhotoGrid(photos: section.photos, isSelectMode: isSelectMode)
+                                } header: {
+                                    SectionHeader(title: section.title)
                                 }
                             }
                         }

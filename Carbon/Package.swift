@@ -15,15 +15,14 @@ let package = Package(
     targets: [
         .target(
             name: "CarbonKit",
-            path: "Sources/CarbonKit",
-            swiftSettings: [
-                .enableUpcomingFeature("BareSlashRegexLiterals")
-            ]
+            path: "Sources/CarbonKit"
         ),
         .testTarget(
             name: "CarbonKitTests",
             dependencies: ["CarbonKit"],
             path: "Tests/CarbonKitTests"
         )
-    ]
+    ],
+    // Match the Xcode app target; tools version 6 does not require Swift 6 mode.
+    swiftLanguageModes: [.v5]
 )

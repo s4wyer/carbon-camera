@@ -1,118 +1,95 @@
 import XCTest
+import CoreMedia
 @testable import CarbonKit
 
 final class ContractsTests: XCTestCase {
-    
-    func testShotCreation() {
+    private func makeRecipe() -> RecipeVersion {
+        RecipeVersion(
+            recipeID: "natural-v1",
+            presetDefinitionID: UUID(),
+            engineVersion: "1.0",
+            source: .rawBayer,
+            parameters: RecipeVersion.Parameters(
+                filmPreset: "Natural", filmStrength: 1, exposureEV: 0,
+                temperatureK: 0, tintOffset: 0, contrastAmount: 1, saturationAmount: 1
+            )
+        )
+    }
+
+    func testShotCreationAndSerialization() throws {
+        let recipe = makeRecipe()
+        let metadata = Shot.CaptureMetadata(
+            temperature: 4000, tint: 0, iso: 100,
+            exposureDuration: CMTime(value: 1, timescale: 60),
+            sceneEV: 8, flashState: .auto, lensPosition: 0.5, orientation: 1
+        )
         let shot = Shot(
-            id: "test-123",
-            captureTimestamp: Date(),
-            rawResourceID: "raw-456",
-            hevcResourceID: "hevc-789",
-            recipeVersionID: "recipe-natural-v1",
-            captureMetadata: CaptureMetadata(
-                focalLengthMM: 35.0,
-                exposureTimeSec: 1.0/60.0,
-                isoSpeed: 100,
-                fNumber: 1.8,
-                lensModel: "iPhone 15 Pro"
-            )
+            captureID: "test-capture", timestamp: Date(), sources: [],
+            currentRecipe: recipe, captureMetadata: metadata
         )
-        
-        XCTAssertEqual(shot.id, "test-123")
-        XCTAssertEqual(shot.rawResourceID, "raw-456")
-        XCTAssertEqual(shot.captureMetadata.focalLengthMM, 35.0)
+        let decoded = try JSONDecoder().decode(Shot.self, from: JSONEncoder().encode(shot))
+
+        XCTAssertEqual(decoded.id, shot.id)
+        XCTAssertEqual(decoded.captureID, "test-capture")
+        XCTAssertEqual(decoded.currentRecipe.id, recipe.id)
+        XCTAssertEqual(decoded.captureMetadata.iso, 100)
+        XCTAssertEqual(decoded.captureMetadata.exposureDuration.value, 1)
+        XCTAssertEqual(decoded.captureMetadata.exposureDuration.timescale, 60)
+        XCTAssertEqual(decoded.captureMetadata.exposureDuration.flags, metadata.exposureDuration.flags)
+        XCTAssertNil(decoded.currentRender)
     }
-    
+
     func testRecipeVersionCreation() {
-        let recipe = RecipeVersion(
-            id: "recipe-natural-v1",
-            presetID: "natural",
-            versionNumber: 1,
-            parameterSnapshot: PresetParameters(
-                exposureEV: 0.0,
-                temperatureShift: 0,
-                tintShift: 0,
-                contrast: 1.0,
-                saturation: 1.0,
-                vibrance: 0.5,
-                highlights: 0.0,
-                shadows: 0.0,
-                blackPoint: 0.0,
-                curve: nil,
-                hslAdjustments: [],
-                grainIntensity: 0.0,
-                grainSize: 1.0,
-                lutID: nil,
-                halationRadius: 0.0,
-                halationIntensity: 0.0,
-                bloomRadius: 0.0,
-                bloomIntensity: 0.0
-            )
-        )
-        
-        XCTAssertEqual(recipe.presetID, "natural")
-        XCTAssertEqual(recipe.versionNumber, 1)
-        XCTAssertEqual(recipe.parameterSnapshot.exposureEV, 0.0)
+        let recipe = makeRecipe()
+        XCTAssertEqual(recipe.recipeID, "natural-v1")
+        XCTAssertEqual(recipe.parameters.exposureEV, 0)
+        XCTAssertEqual(recipe.grainSeed, 0)
+        XCTAssertNil(recipe.crop)
+        XCTAssertTrue(recipe.isEditable)
     }
-    
-    func testPresetParametersEquality() {
-        let params1 = PresetParameters(
-            exposureEV: 0.5,
-            temperatureShift: 100,
-            tintShift: -50,
-            contrast: 1.2,
-            saturation: 1.1,
-            vibrance: 0.6,
-            highlights: -0.2,
-            shadows: 0.3,
-            blackPoint: 0.05,
-            curve: nil,
-            hslAdjustments: [],
-            grainIntensity: 0.1,
-            grainSize: 1.5,
-            lutID: "lut-kodak-portra",
-            halationRadius: 20.0,
-            halationIntensity: 0.3,
-            bloomRadius: 50.0,
-            bloomIntensity: 0.2
+
+    func testPresetParametersRoundTrip() throws {
+        let parameters = PresetParameters(
+            exposureEV: 0.5, temperatureOffsetK: 100, tintOffset: -50,
+            contrast: 1.2, saturation: 1.1, grainAmount: 0.1
         )
-        
-        let params2 = PresetParameters(
-            exposureEV: 0.5,
-            temperatureShift: 100,
-            tintShift: -50,
-            contrast: 1.2,
-            saturation: 1.1,
-            vibrance: 0.6,
-            highlights: -0.2,
-            shadows: 0.3,
-            blackPoint: 0.05,
-            curve: nil,
-            hslAdjustments: [],
-            grainIntensity: 0.1,
-            grainSize: 1.5,
-            lutID: "lut-kodak-portra",
-            halationRadius: 20.0,
-            halationIntensity: 0.3,
-            bloomRadius: 50.0,
-            bloomIntensity: 0.2
+        let decoded = try JSONDecoder().decode(
+            PresetParameters.self, from: JSONEncoder().encode(parameters)
         )
-        
-        XCTAssertEqual(params1, params2)
+        XCTAssertEqual(decoded, parameters)
     }
-    
+
     func testDevelopmentJobCreation() {
-        let job = DevelopmentJob(
-            id: "job-abc",
-            shotID: "shot-123",
-            recipeVersionID: "recipe-natural-v1",
-            status: .pending,
-            createdAt: Date()
-        )
-        
-        XCTAssertEqual(job.status, .pending)
+        let job = DevelopmentJob(shotID: UUID(), recipeVersionID: UUID())
+        XCTAssertEqual(job.status, .queued)
         XCTAssertNil(job.completedAt)
-        XCTAssertNil(job.errorMessage)
+        XCTAssertTrue(job.checkpoints.isEmpty)
+    }
+
+    func testCameraDefaultConfigPreservesMediaTime() throws {
+        let time = CMTime(value: 1001, timescale: 30000, flags: [.valid, .hasBeenRounded], epoch: 2)
+        let config = CameraDefaultConfig(
+            activeVideoMinFrameDuration: time, defaultPresetID: UUID()
+        )
+        let decoded = try JSONDecoder().decode(
+            CameraDefaultConfig.self, from: JSONEncoder().encode(config)
+        )
+        XCTAssertEqual(decoded.activeVideoMinFrameDuration.value, time.value)
+        XCTAssertEqual(decoded.activeVideoMinFrameDuration.timescale, time.timescale)
+        XCTAssertEqual(decoded.activeVideoMinFrameDuration.flags, time.flags)
+        XCTAssertEqual(decoded.activeVideoMinFrameDuration.epoch, time.epoch)
+    }
+
+    func testCatalogHasOneDefaultAndUniquePresetIDs() throws {
+        let presets = PresetLibrary.all
+        XCTAssertFalse(presets.isEmpty)
+        XCTAssertEqual(Set(presets.map(\.presetID)).count, presets.count)
+        XCTAssertEqual(PresetLibrary.defaultPreset?.presetID, "carbon-natural")
+        let preset = try XCTUnwrap(PresetLibrary.defaultPreset)
+        let decoded = try JSONDecoder().decode(
+            PresetDefinition.self, from: JSONEncoder().encode(preset)
+        )
+        XCTAssertEqual(decoded.baseParameters, preset.baseParameters)
+        XCTAssertEqual(decoded.presetID, preset.presetID)
     }
 }

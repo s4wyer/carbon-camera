@@ -91,7 +91,7 @@ public struct FilmEffectParameters: Codable, Equatable {
 /// Pure-host deterministic noise for grain verification. On-device, the Metal kernel
 /// with the same integer-hash constants replaces this; the seeds and bounds match.
 public func integerHashNoise(x: UInt32, y: UInt32, seed: UInt32) -> Float {
-    var h = x &* 374761393 &+ y &* 668265263 &+ seed &* 1442695040888963407
+    var h = UInt64(x) &* 374761393 &+ UInt64(y) &* 668265263 &+ UInt64(seed) &* 1442695040888963407
     h = (h ^ (h >> 13)) &* 1274126177
     return Float(h & 0xFFFFFF) / Float(0xFFFFFF)  // 0..1
 }

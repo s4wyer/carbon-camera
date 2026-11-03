@@ -67,9 +67,6 @@ extension PresetDefinition {
 // MARK: - Example preset library (M1b SET13)
 
 public struct PresetLibrary {
-    /// All defined presets, ordered.
-    public static let all: [PresetDefinition] = []
-    
     /// Filter by group.
     public static func presets(in group: PresetGroup) -> [PresetDefinition] {
         all.filter { $0.group == group }

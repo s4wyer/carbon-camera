@@ -120,24 +120,19 @@ public enum LUTLoader {
             stream.pointee.src_ptr = srcPtr.assumingMemoryBound(to: UInt8.self)
             stream.pointee.src_size = data.count
             
-            repeat {
-                stream.pointee.dst_ptr = &dstBuffer
-                stream.pointee.dst_size = bufferSize
-                
-                status = compression_stream_process(stream, 0)
-                
-                switch status {
-                case COMPRESSION_STATUS_OK, COMPRESSION_STATUS_END:
-                    let written = bufferSize - stream.pointee.dst_size
-                    decompressed.append(&dstBuffer, count: written)
-                    
-                case COMPRESSION_STATUS_ERROR:
-                    throw LUTError.decompressionFailed
-                    
-                default:
-                    break
-                }
-            } while status == COMPRESSION_STATUS_OK
+            try dstBuffer.withUnsafeMutableBufferPointer { destination in
+                repeat {
+                    stream.pointee.dst_ptr = destination.baseAddress!
+                    stream.pointee.dst_size = destination.count
+
+                    status = compression_stream_process(stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue))
+                    guard status == COMPRESSION_STATUS_OK || status == COMPRESSION_STATUS_END else {
+                        throw LUTError.decompressionFailed
+                    }
+                    let written = destination.count - stream.pointee.dst_size
+                    decompressed.append(destination.baseAddress!, count: written)
+                } while status == COMPRESSION_STATUS_OK
+            }
         }
         
         return decompressed

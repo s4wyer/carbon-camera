@@ -40,15 +40,26 @@ jobs:
           # SPM resolves automatically during build now
           echo "Dependencies will resolve during build"
           
-      - name: Run Swift tests
+      - name: Run iOS tests
         run: |
+          set -euo pipefail
           cd Carbon
-          swift test --enable-code-coverage
-          
-      - name: Build Carbon framework
-        run: |
-          cd Carbon
-          swift build -c release --arch arm64 --sdk iphoneos
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          iphones = [device["udid"] for runtime, group in devices.items()
+                     if ".iOS-" in runtime for device in group
+                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+          if not iphones:
+              sys.exit("No available iPhone simulator found")
+          print(iphones[0])')
+          xcodebuild test \
+            -project Carbon.xcodeproj \
+            -scheme Carbon \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -enableCodeCoverage YES \
+            -resultBundlePath ./build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
           
       - name: Build and archive IPA
         run: |
@@ -66,19 +77,28 @@ jobs:
             CODE_SIGN_ENTITLEMENTS="" \
             DEVELOPMENT_TEAM=""
             
-          # Export unsigned IPA (no provisioning profile in CI)
-          xcodebuild -exportArchive \
-            -archivePath ./build/Carbon.xcarchive \
-            -exportPath ./build \
-            -exportOptionsPlist ../ci/ExportOptions.plist
+          # exportArchive requires signing/provisioning even for development exports.
+          # Package the unsigned app for downstream signing instead.
+          mkdir -p ./build/Payload
+          cp -R ./build/Carbon.xcarchive/Products/Applications/Carbon.app ./build/Payload/
+          (cd build && /usr/bin/ditto -c -k --keepParent Payload Carbon-unsigned.ipa)
             
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: Carbon-unsigned.ipa
           path: Carbon/build/*.ipa
+          if-no-files-found: error
           retention-days: 14
           
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-test-results
+          path: Carbon/build/TestResults.xcresult
+          retention-days: 14
+
       - name: Upload dSYMs
         uses: actions/upload-artifact@v4
         with:
