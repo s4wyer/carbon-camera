@@ -11,6 +11,7 @@ struct LibraryView: View {
     @State private var activeTab: LibraryTab = .all
     @State private var isSelectMode: Bool = false
     @State private var selectedShots: Set<UUID> = []
+    @State private var selectedShot: Shot?
     
     enum LibraryTab: String, CaseIterable {
         case all = "All"
@@ -112,6 +113,9 @@ struct LibraryView: View {
                                             },
                                             onTogglePick: {
                                                 store.togglePick(shotID: shot.id)
+                                            },
+                                            onOpen: {
+                                                selectedShot = shot
                                             }
                                         )
                                     }
@@ -133,7 +137,7 @@ struct LibraryView: View {
                         // Already on library
                     }
                     bottomTabButton("Lab", active: false) {
-                        // Lab sheet
+                        coordinator.navigateTo(.lab)
                     }
                 }
                 .padding(.vertical, 14)
@@ -148,6 +152,9 @@ struct LibraryView: View {
         }
         .task {
             await store.loadJournal()
+        }
+        .fullScreenCover(item: $selectedShot) { shot in
+            PhotoDetailView(shot: shot)
         }
     }
     
@@ -198,32 +205,41 @@ private struct PhotoCard: View {
     let isSelected: Bool
     let onToggleSelect: () -> Void
     let onTogglePick: () -> Void
+    let onOpen: () -> Void
+    
+    @State private var thumbnail: UIImage?
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Photo thumbnail
             GeometryReader { geo in
-                if let url = shot.sources.first?.mediaURL,
-                   let uiImage = UIImage(contentsOfFile: url.path) {
-                    Image(uiImage: uiImage)
+                if let thumbnail = thumbnail {
+                    Image(uiImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geo.size.width, height: geo.size.width)
                         .clipped()
                 } else {
-                    // Fallback dark placeholder with camera icon
+                    // Loading placeholder
                     Rectangle()
                         .fill(Color("Remjet").opacity(0.1))
                         .frame(width: geo.size.width, height: geo.size.width)
                         .overlay(
-                            Image(systemName: "photo")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color("SecondaryInk").opacity(0.4))
+                            ProgressView()
+                                .tint(Color("SecondaryInk"))
                         )
                 }
             }
             .aspectRatio(1.0, contentMode: .fit)
             .cornerRadius(4)
+            .task {
+                thumbnail = PhotoThumbnailCache.shared.thumbnail(for: shot)
+            }
+            .onTapGesture {
+                if !isSelectMode {
+                    onOpen()
+                }
+            }
             
             // Star icon at top right (G06 Picks)
             Button(action: onTogglePick) {

@@ -12,6 +12,7 @@ final class AppCoordinator: ObservableObject {
         case welcome
         case camera
         case library
+        case lab
     }
     
     init() {

@@ -16,6 +16,8 @@ struct CarbonApp: App {
                     CameraView(coordinator: coordinator)
                 case .library:
                     LibraryView(coordinator: coordinator)
+                case .lab:
+                    LabView(coordinator: coordinator)
                 }
             }
             .transition(.opacity)

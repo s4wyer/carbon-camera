@@ -8,6 +8,7 @@ import AVFoundation
 struct CameraView: View {
     @ObservedObject var coordinator: AppCoordinator
     @StateObject private var cameraManager = CameraManager()
+    @StateObject private var volumeObserver = VolumeButtonObserver()
     
     // UI state
     @State private var selectedFocal: Double = 35.0
@@ -66,6 +67,10 @@ struct CameraView: View {
                                     cameraManager.setExposureBias(moodExposure)
                                 }
                         )
+                        .onTapGesture { location in
+                            // Tap to focus and expose (U05)
+                            cameraManager.setFocusAndExposure(at: location)
+                        }
                     
                     // Corner brightlines (U07)
                     CornerBrightlinesView()
@@ -142,9 +147,12 @@ struct CameraView: View {
         }
         .onAppear {
             cameraManager.startSession()
+            volumeObserver.onShutterPress = { triggerShutter() }
+            volumeObserver.start()
         }
         .onDisappear {
             cameraManager.stopSession()
+            volumeObserver.stop()
         }
         .sheet(isPresented: $showPresetMenu) {
             PresetSelectorSheet()

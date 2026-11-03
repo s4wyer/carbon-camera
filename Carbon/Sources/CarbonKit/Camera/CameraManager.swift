@@ -231,6 +231,30 @@ final class CameraManager: NSObject, ObservableObject {
         activeWarmthK = kelvinOffset
     }
     
+    func setFocusAndExposure(at point: CGPoint) {
+        guard let device = session.inputs.compactMap({ ($0 as? AVCaptureDeviceInput)?.device }).first else {
+            return
+        }
+        
+        do {
+            try device.lockForConfiguration()
+            
+            if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.autoFocus) {
+                device.focusPointOfInterest = point
+                device.focusMode = .autoFocus
+            }
+            
+            if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.autoExpose) {
+                device.exposurePointOfInterest = point
+                device.exposureMode = .autoExpose
+            }
+            
+            device.unlockForConfiguration()
+        } catch {
+            logger.error("Failed to set focus/exposure point: \(error.localizedDescription)")
+        }
+    }
+    
     // MARK: - Photo Capture (C01, C04, SET04)
     
     func capturePhoto() {
@@ -337,19 +361,28 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         }
         
         // Extract Lapse SET §2 metadata tuple
-        let iso = photo.metadata[kCGImagePropertyExifISOSpeedRatings as String] as? Int ?? 100
-        let expDuration = photo.metadata[kCGImagePropertyExifExposureTime as String] as? Double ?? (1.0 / 60.0)
+        let metadata = photo.metadata
+        let iso = (metadata[kCGImagePropertyExifISOSpeedRatings as String] as? [Int])?.first ?? 100
+        let expDuration = metadata[kCGImagePropertyExifExposureTime as String] as? Double ?? (1.0 / 60.0)
         let cmDuration = CMTime(seconds: expDuration, preferredTimescale: 1000)
         
+        // Extract white balance from EXIF (may be missing)
+        let temperature = metadata[kCGImagePropertyExifWhiteBalance as String] as? Float ?? 5500.0
+        let orientation = metadata[kCGImagePropertyOrientation as String] as? Int ?? 1
+        
+        // Compute scene EV from ISO and exposure time
+        let fNumber: Float = 1.8 // iPhone wide lens
+        let sceneEV = log2(pow(fNumber, 2) / (Float(iso) / 100.0 * Float(expDuration)))
+        
         captureMetadata = Shot.CaptureMetadata(
-            temperature: 5500,
+            temperature: temperature,
             tint: 0,
-            iso: iso,
+            iso: Float(iso),
             exposureDuration: cmDuration,
-            sceneEV: 8.0,
-            flashState: .auto,
+            sceneEV: sceneEV,
+            flashState: activeFlashMode == .on ? .on : (activeFlashMode == .auto ? .auto : .off),
             lensPosition: 0.5,
-            orientation: 1
+            orientation: orientation
         )
     }
     
@@ -440,6 +473,13 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                         lensPosition: 0.5,
                         orientation: 1
                     )
+                )
+                
+                // Queue background rendering
+                DevelopmentQueue.shared.submit(
+                    shot: shot,
+                    preset: defaultPreset,
+                    parameters: defaultPreset.baseParameters
                 )
                 
                 completion(.success(shot))
