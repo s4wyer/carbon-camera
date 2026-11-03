@@ -398,7 +398,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                         id: UUID(),
                         captureID: entry.captureID,
                         type: .rawBayer,
-                        mediaURL: await CaptureJournal.shared.fileURL(for: rawName),
+                        mediaURL: CaptureJournal.shared.fileURL(for: rawName),
                         mediaHash: rawHash,
                         provenance: SourceResource.Provenance(
                             engine: "carbon-camera",
@@ -413,7 +413,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                         id: UUID(),
                         captureID: entry.captureID,
                         type: .processedHEVC,
-                        mediaURL: await CaptureJournal.shared.fileURL(for: hevcName),
+                        mediaURL: CaptureJournal.shared.fileURL(for: hevcName),
                         mediaHash: hevcHash,
                         provenance: SourceResource.Provenance(
                             engine: "carbon-camera",

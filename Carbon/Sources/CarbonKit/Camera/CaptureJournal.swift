@@ -136,7 +136,7 @@ public actor CaptureJournal {
         return valid
     }
     
-    public func fileURL(for filename: String) -> URL {
+    public nonisolated func fileURL(for filename: String) -> URL {
         baseDirectory.appendingPathComponent(filename)
     }
     

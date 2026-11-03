@@ -273,7 +273,7 @@ final class LibraryStore: ObservableObject {
                         id: UUID(),
                         captureID: entry.captureID,
                         type: .processedHEVC,
-                        mediaURL: await CaptureJournal.shared.fileURL(for: hevc),
+                        mediaURL: CaptureJournal.shared.fileURL(for: hevc),
                         mediaHash: hHash,
                         provenance: SourceResource.Provenance(
                             engine: "carbon-camera",
