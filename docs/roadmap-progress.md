@@ -23,11 +23,12 @@ Updated November 3, 2024. One entry per completed or blocked ticket.
 | SET06b | ✅ | (pending Mac) | `docs/reference/comparison.md` | **Complete.** Three-way comparison: 25 decisions, every disagreement resolved. Halide/Lapse/No Fusion authority mapped. |
 | SET06c | ✅ | (pending Mac) | `docs/decisions/D-002-camera-default-config.md` | **Complete.** Lapse baseline + 4 overrides documented. `CameraDefaultConfig` record exists in Contracts.swift. |
 
-## Milestone M1b — Pipeline and presets (additional ticket)
+## Milestone M1b — Pipeline and presets
 
 | Ticket | Status | Commit | Evidence | Notes |
 |---|---|---|---|---|
-| SET13b | ⚙️ | (pending SET12) | `docs/decisions/D-024-reference-presets-menu.md`, `Carbon/Sources/CarbonKit/Models/PresetLibrary.swift` | **NEW TICKET (principal request).** Reference presets menu: surfaces all Halide/Lapse/No Fusion presets behind a "Stolen Goods" submenu with cheeky attribution. PresetGroup enum (.ours, .stolen), displayNameWithAttribution computed property (e.g., "Zephyr (from Halide)"), attributionText for detail view. Depends on SET12 (unified preset model). Type B. |
+| SET12 | ⚙️ | 4d246a8 | `docs/SET12-execution-report.md`, `Carbon/Sources/CarbonKit/Models/PresetCatalog.swift` | **Unified preset model complete (partial import).** 34 presets defined: 1 Carbon original, 11 Halide Looks (SDR LUTs), 20 No Fusion (imported LUT IDs, intensity, bloom; gaps: grainSize 0.5, mono flag, HSL hue, curves), 2 Lapse placeholders. All traceable to source. LUT loading, full param import, rendering pending. Type A. |
+| SET13b | ⚙️ | (pending SET12) | `docs/decisions/D-024-reference-presets-menu.md`, `Carbon/Sources/CarbonKit/Models/PresetLibrary.swift` | **Reference presets menu scaffold complete.** PresetGroup enum (.ours, .stolen), displayNameWithAttribution computed property, attributionText for detail view. Depends on SET12. Type B. |
 
 ## Status summary
 
