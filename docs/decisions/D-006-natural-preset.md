@@ -5,6 +5,8 @@
 **Date:** 2024-11-03  
 **Authority:** Roadmap §2 preset rules; product goal (amateur-first people camera)
 
+**Approved update (2026-11-03):** [D-025](D-025-amateur-camera-defaults.md) sets Natural's added grain to zero and confirms no deliberate skin smoothing. This replaces the earlier 0.4 grain proposal; rendering and portrait validation remain pending.
+
 ## Requirement (roadmap §2)
 
 > Presets are the one place an amateur will experiment, so they must be legible at a glance:
@@ -28,12 +30,12 @@ None of these is what a first-time amateur lands on in **our** app. Halide's Pro
 **Preset 1 (default, displayOrder 0):**
 
 - **Name:** "Natural"
-- **Description:** "Lifelike color and smooth skin tones."
+- **Description:** "Lifelike color and natural skin tones."
 - **Source:** `original(rationale: "D-006: Roadmap §2 requires a plain-language, portrait-tuned default. Process Zero (Halide) is the film base, but 'Natural' is our user-facing name.")`
 - **Base:** Halide Process Zero LUT (H §2, `p0sdr`/`p0hdr` resources, decoded 33³ half-float RGB payloads retained in `recovery/resources/luts/`), **but** with:
   - `filmStrength = 0.85` (not 1.0) — slightly softer for amateurs
   - `halation` from Lapse Metal defaults (D-018)
-  - `grain` from Lapse Metal seeded hash (D-017), default amount 0.4 (not 0.0)
+  - `grain` from Lapse Metal seeded hash (D-017) when enabled, default amount **0.0** (D-025)
   - Face-balance/skin-tone protection (L §5 `FaceBalance`, `SkinToneTwo`; H §2 Rembrandt
 
  parameters)
@@ -49,7 +51,7 @@ None of these is what a first-time amateur lands on in **our** app. Halide's Pro
 
 Roadmap §2 says the preset name must be predicted by a first-time user. "Process Zero" is a technical term that only makes sense if you know Halide's marketing. "Natural" says what it does.
 
-Halide's Process Zero *is* the film; our "Natural" preset applies it with the product-goal tuning (skin protection, softened strength, Lapse grain for determinism).
+Halide's Process Zero *is* the film; our "Natural" preset applies it with the product-goal tuning (skin protection, softened strength, no added grain by default). Optional grain uses the deterministic Lapse model.
 
 ## Other presets (SET13)
 

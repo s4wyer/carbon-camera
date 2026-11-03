@@ -18,6 +18,8 @@ Carbon defaults to **`.auto`**. This is already an explicit product decision in
 is Carbon's goal of producing a good people photo on the first tap with zero
 configuration.
 
+The principal reaffirmed this in [D-025](../decisions/D-025-amateur-camera-defaults.md#c07-flash-default): keep Auto / On / Off accessible and use a tested capture fallback when RAW/flash cannot work together, with accurate provenance and a usable photograph taking priority.
+
 This answers Carbon's configuration question through a documented override.
 It does not establish Halide's default, which remains unrecovered. Lapse's
 request-byte mapping (1/2 → on, 0/3 → off) does not establish an Auto default.

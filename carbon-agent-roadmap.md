@@ -28,6 +28,8 @@ Where the three reference documents disagree on the same concern, record the dis
 
 The three technical documents contain both recovered implementation and explicitly marked unknowns. Where a document marks a behavior as "unknown," "not recovered," or "cannot be recovered," treat it as missing evidence and file a question (see §3). Do not invent a value from the surrounding description.
 
+**Principal-approved product answers (November 3, 2026):** [D-025](docs/decisions/D-025-amateur-camera-defaults.md) answers all 15 tracked questions for Carbon and sets policy for the three deferred topics. These explicit product decisions govern Carbon's behavior where the original reference remains unknown; do not claim the reference behavior was recovered. Native input handling, Carbon slider ranges, grain order/default, and safety-capture behavior use D-025 as their acceptance authority. Reference-derived portions retain Type A evidence requirements; Carbon-specific portions use the recorded build-own rationale. Device verification and the SET11 pipeline comparison remain required.
+
 ---
 
 ## 2 Product goal and design bias
@@ -304,7 +306,7 @@ Unchanged from v3 — N07, R14, N08, N09, G15 with the same acceptance checks. T
 
 | Step | Ticket | Type | Source |
 |---|---|---|---|
-| 078 | C05 Three-frame safety selection | A | Halide REF §1 (burst behavior — ask for specifics) |
+| 078 | C05 Safety capture setting | B | D-025: opt-in, off by default; request three frames where supported, group originals, manual selection, first successful frame as cover; no eye detection or automatic ranking. Halide burst details remain unrecovered. |
 | 079 | C08 Party Drag | A | Halide REF §1, §8; Lapse SET §1 (flash/EV combination) |
 | 080 | C09 Black and white Snap Focus | A | Halide REF §2 (Mono Street parameters — ask); NF REF §6 (manual focus path) |
 | 081 | C14 Super 8 motion capture | A | NF REF §2 (Live Photo assembly, 3.6s wait budget, AAC audio settings, paired asset resource types 1 + 9) |

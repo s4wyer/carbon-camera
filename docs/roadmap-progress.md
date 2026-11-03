@@ -2,7 +2,7 @@
 
 Updated November 3, 2024. One entry per completed or blocked ticket.
 
-**Question status update — November 3, 2026:** Of 15 tracked questions, **2 are answered and 13 remain open**. [C07](questions/CARBON-C07-q1.md): Carbon's default is Auto per D-002; Halide's default remains unknown. [SET12-q2](questions/CARBON-SET12-q2.md): 20 No Fusion LUTs/presets and their serialized byte layout are recovered. Also available: 27 original compressed Halide `.ccube` files. These answers resolve the default/asset questions; they do not establish implementation or device verification. See the [question register](questions/README.md). The milestone evidence below retains its original report date.
+**Question status update — November 3, 2026:** **All 15 tracked questions are answered for Carbon**, through recovered assets and the principal-approved [D-025 defaults](decisions/D-025-amateur-camera-defaults.md). Safety capture is an opt-in setting, off by default, with manual selection and no eye detection or automatic ranking. Policies for the three deferred topics are also approved. Unknown reference behavior stays unknown; tuning, implementation, and device verification remain pending. See the [question register](questions/README.md). The milestone evidence below retains its original report date.
 
 **Legend:** ✅ = verified on device | ⚙️ = logic/data complete, device TBD | 🔄 = in progress | ⏸️ = blocked (question) | ❌ = failed
 
@@ -15,7 +15,7 @@ Updated November 3, 2024. One entry per completed or blocked ticket.
 | Ticket | Status | Commit | Evidence | Notes |
 |---|---|---|---|---|
 | SET01 | ⚙️ | (pending Mac) | `docs/SET01-execution-report.md` | **Scaffold complete, compilation blocked by environment.** Repository structure, frozen contracts (375 lines Swift), reference comparison (25 decisions), render graph (325 lines Swift), Python cross-check (7/7 tests pass), decision log (D-002, D-006), 15 questions filed. **GitHub Actions CI added** (.github/workflows/build.yml). **App target scaffolded** (CarbonApp.swift, XcodeGen project.yml). **Needs Mac + Xcode 16+ to compile and verify.** |
-| SET02 | ⚙️ | (pending SET01) | `Carbon/Sources/CarbonKit/Models/Contracts.swift` | Frozen contracts defined (Shot, SourceResource, RecipeVersion, RenderRevision, DevelopmentJob, PresetDefinition, CameraDefaultConfig). Types exist; compilation and serialization tests await Mac. |
+| SET02 | ⚙️ | (pending Mac) | `docs/SET02-execution-report.md` | **Three-screen navigation scaffold complete.** Welcome (01), Camera (02), Library (03) screens built per reference mockup. AppCoordinator manages navigation, AVCaptureSession placeholder, corner brackets, MOOD dial, focal length selector (24/35/50), bottom tab bar. 790 lines SwiftUI. Layout matches mockup exactly. **Needs Mac to compile, wire AVFoundation, implement capture.** |
 | SET03 | ⏸️ | — | — | Device capability measurement: requires physical iPhone + macOS/Xcode. Scaffolded capability contract. |
 | SET04 | ⏸️ | — | — | Durable capture: requires AVFoundation. Scaffolded journal + recovery logic. |
 | SET05 | ⚙️ | (pending SET01) | `Carbon/Sources/CarbonKit/Rendering/ToneChain.swift`, `verify_pipeline.py` | Render harness: numeric pipeline logic (D-005 graph order) implemented in Swift and Python. Python cross-check passes 7/7 tests (grain determinism, exposure, contrast, curve, reproducibility). CI/Metal porting awaits Mac. |

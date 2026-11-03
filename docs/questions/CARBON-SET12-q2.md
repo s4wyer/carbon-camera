@@ -31,6 +31,8 @@ The recovery report establishes:
 
 This supersedes the original missing-binaries/unknown-byte-format entry.
 
+The approved [D-025](../decisions/D-025-amateur-camera-defaults.md#set12-q2-lut-resources) policy is to use the recovered originals, verify interpretation before exposing presets, and load the selected look first so the full library does not delay camera startup.
+
 ## Remaining verification
 
 Static asset recovery does not establish cube axis ordering, executable channel

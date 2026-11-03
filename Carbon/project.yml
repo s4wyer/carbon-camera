@@ -49,6 +49,8 @@ targets:
         NSPhotoLibraryAddUsageDescription: >-
           Carbon adds the photos you export to your library. It never reads your
           existing library.
+        NSPhotoLibraryUsageDescription: >-
+          Carbon reads your library to display photos you've captured with the app.
         NSMicrophoneUsageDescription: >-
           Only when you record ambient sound with a photo (Voice Backings).
         NSLocalNetworkUsageDescription: >-

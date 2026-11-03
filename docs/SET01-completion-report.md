@@ -1,6 +1,6 @@
 # SET01 completion report
 
-**Question/asset update — November 3, 2026:** This is a historical SET01 report. The [current register](questions/README.md) has **2 answered questions and 13 open**. Carbon's flash default is Auto (D-002); 20 original No Fusion LUTs/presets and their byte layout are recovered. Another 27 original compressed Halide `.ccube` files are available. Statements below about missing binaries describe the original report state; integration and rendering verification remain pending.
+**Question/asset update — November 3, 2026:** This is a historical SET01 report. **All 15 tracked questions are answered for Carbon** through recovered assets and the approved [D-025 defaults](decisions/D-025-amateur-camera-defaults.md); see the [current register](questions/README.md). Safety capture is an opt-in setting with manual selection, without eye detection or automatic ranking. Policies for the three deferred topics are also approved. Statements below about missing binaries or unanswered reference gaps describe the original report state. Unknown source behavior, implementation, tuning, and device verification remain distinct from these product answers.
 
 **Ticket:** SET01 — Reproducible native iOS project  
 **Type:** B (build-own)  
@@ -211,9 +211,9 @@ Until then, SET01 status is **⚙️ logic/data complete, device TBD**.
 - No compiled Swift code.
 - No actual render output (only numeric math).
 
-## Open questions (from docs/questions/README.md)
+## Tracked questions (answered for Carbon; historical reference gaps below)
 
-15 questions tracked; current review: 2 answered, 13 open:
+All 15 questions have approved Carbon answers in D-025 and the current register. The list below preserves the original reference topics; their associated features still require implementation and verification:
 - Composition guide geometry (U07)
 - **Answered — Flash default (C07):** Carbon uses Auto per D-002; Halide's own default remains unknown. [Explanation](questions/CARBON-C07-q1.md).
 - Image Lab slider (R08)
@@ -230,7 +230,7 @@ Until then, SET01 status is **⚙️ logic/data complete, device TBD**.
 - Pre-shutter RAW frames (C06)
 - Camera Control detail (U10)
 
-None of these questions block *this* report. The remaining open questions block their associated ticket sub-behaviors.
+None of these questions block *this* report. Remaining implementation and validation are tracked with their associated tickets and D-025.
 
 ## Commit message (when on Mac)
 

@@ -55,7 +55,7 @@ carbon-plan/
 
 ✅ **Default preset rationale** (`docs/decisions/D-006-natural-preset.md`): "Natural" preset (Process Zero film base, renamed/tuned for amateurs, portrait-optimized).
 
-✅ **Question escalation** ([register](docs/questions/README.md), reviewed November 3, 2026): 15 tracked questions; **2 answered, 13 open**. Carbon's Auto flash default is decided; No Fusion LUT originals and serialized byte layout are available. Remaining runtime verification is documented with each answer.
+✅ **Question escalation** ([register](docs/questions/README.md), reviewed November 3, 2026): **All 15 tracked questions are answered for Carbon**, through recovered assets and the principal-approved [D-025 defaults](docs/decisions/D-025-amateur-camera-defaults.md). Safety capture is an opt-in setting with manual selection and no automatic frame ranking. Implementation, tuning, and device verification remain pending.
 
 ⏸️ **Native build:** Scaffold exists, but cannot compile without Mac + Xcode.
 

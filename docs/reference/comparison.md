@@ -40,10 +40,10 @@ Every row carries a decision ID that is also referenced from `docs/decisions/`.
 
 ## Reference questions and recorded answers
 
-Status reviewed November 3, 2026: 2 answered within the stated scope, 13 open.
+Status reviewed November 3, 2026: **All 15 questions below are answered for Carbon** through recovered assets and principal-approved [D-025 product decisions](../decisions/D-025-amateur-camera-defaults.md). The table preserves the original reference gaps; unknown source behavior is not claimed recovered. Safety capture is an opt-in setting with manual selection and no automatic frame ranking. Implementation and validation remain pending.
 See the [question register](../questions/README.md) for current statuses and explanations.
 
-| Gap | Doc + section | Question file |
+| Original reference gap (Carbon answer recorded) | Doc + section | Question file |
 |---|---|---|---|
 | Composition guide geometry (thirds/golden/rabatment coordinates, line widths) | H §6 | `docs/questions/CARBON-U07-q1.md` |
 | Flash default: **Answered for Carbon** (`.auto`, D-002/C11); Halide's own default remains unknown | H §8; D-002 | [CARBON-C07-q1.md](../questions/CARBON-C07-q1.md) |
@@ -57,10 +57,10 @@ See the [question register](../questions/README.md) for current statuses and exp
 | NF selected default preset/format (clean install) | N §9 | `docs/questions/CARBON-SET11-q2.md` |
 | Lapse zoom ramp-rate policy | L §1 | `docs/questions/CARBON-C10-q1.md` |
 | Lapse "new instants" flag default | L §3 | `docs/questions/CARBON-SET11-q3.md` |
-| Burst specifics (count, spacing, selection criteria) | H §1 (not recovered) | `docs/questions/CARBON-C05-q1.md` |
+| Safety capture: **Answered for Carbon** (setting off by default, three frames where supported, manual selection; no eye detection/ranking) | H §1 (not recovered); D-025 | [CARBON-C05-q1.md](../questions/CARBON-C05-q1.md) |
 | Pre-shutter RAW frame availability | H §1, C04 note | `docs/questions/CARBON-C06-q1.md` |
 | Camera Control integration detail | H §7 | `docs/questions/CARBON-U10-q1.md` |
 
-Doc-marked unknowns that are **not** blocking a Part 1 ticket (Live Photo internals, depth
-model handoff, private negative container) are recorded here and deferred, since Part 1 does
-not ship those behaviours: `docs/questions/README.md` tracks the deferral.
+Product policies for Live Photos, depth handoff, and the negative container are
+approved in D-025; implementation details remain deferred to their milestones.
+The [question register](../questions/README.md) tracks the policy and remaining work.

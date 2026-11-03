@@ -16,6 +16,8 @@ Start as a guest, offline. Ask for camera access when entering capture, then int
 
 The default experience is Natural Lens, a 24-shot roll, 35mm-equivalent framing where the device supports a useful crop, automatic exposure, and a restrained Carbon stock. Flash remains easy to reach. Users can shoot as a guest, offline, before creating an account or granting access to their library, microphone, contacts, notifications, or local network.
 
+Approved November 3, 2026: [D-025](docs/decisions/D-025-amateur-camera-defaults.md) records the defaults for guides, editing, capture events, rendering, format, and advanced features. **Safety capture is an opt-in setting, off by default:** request three nearby frames where supported, keep one logical shot, and let the user choose manually. No eye detection or automatic frame ranking is required. This is separate from C02's paired RAW/processed recovery image.
+
 Use three destinations: Camera, Rolls, and Lab. Camera is the launch destination after onboarding. Rolls holds personal and CC'd envelopes. Lab holds saved Carbon Copies and learning prompts. Settings is available from the film flap and Rolls. Keep a dedicated stranger feed outside the product scope, as the conversation requests.
 
 The complete scope is delivered in six phases. P0 validates the difficult capture combinations. P1 supplies an attractive and dependable camera. P2 completes the personal darkroom and curation. P3 adds private collaboration and system entry. P4 adds creative capture, motion, remotes, and keepsakes. P5 completes the advanced imaging and co-op light program. A P3 launch is a release checkpoint; P4 and P5 remain committed scope for the full product.
@@ -61,7 +63,7 @@ Use a quiet cream canvas, a compact Carbon wordmark, a modest Rolls title, and a
 
 ### Light Table and print detail
 
-Opening a finished envelope offers the contact sheet and an optional quick review. Near duplicates form a stack with a suggested best frame; manual stars remain authoritative. Flicking rejects moves them to a recoverable bin. Export selected shots only after review unless automatic export was explicitly enabled. The front of a print prioritizes the image. The back holds date, lens, recipe QR, Credits, and an audio play button when a backing exists. Use separate Flip and Play controls because horizontal swipes, pinch zoom, and holds are not universally discoverable.
+Opening a finished envelope offers the contact sheet and an optional quick review. Near duplicates form a stack with manual cover selection; safety-capture groups initially show the first successful frame and let the user choose another. Manual stars remain authoritative. Flicking rejects moves them to a recoverable bin. Export selected shots only after review unless automatic export was explicitly enabled. The front of a print prioritizes the image. The back holds date, lens, recipe QR, Credits, and an audio play button when a backing exists. Use separate Flip and Play controls because horizontal swipes, pinch zoom, and holds are not universally discoverable.
 
 ### Lab and CC flows
 
@@ -238,7 +240,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | C02 | Coverage safety capture | P1 | 73 | Retain RAW and a processed safety image when the active configuration supports paired capture; preserve capture provenance and allow recovery without creating duplicate gallery cards. |
 | C03 | Low-light fallback | P1/P5 | 73 | Automatically choose a supported processed or ProRAW night fallback and record provenance. In P5, validate blending an aligned computational safety frame with RAW development; retain the usable single-frame fallback when blending fails. |
 | C04 | Responsive shutter and queue | P1 | 40 | Submit capture immediately, durably queue returned originals before heavy rendering, and permit rapid follow-up shots within tested memory and camera readiness limits. |
-| C05 | Three-frame safety selection | P4 | 96 | Capture three nearby frames where supported and select eyes-open, sharp, low-motion results; keep one logical shot and permit alternate selection. Validate timing rather than assuming RAW prebuffer access. |
+| C05 | Safety capture setting | P4 | 96 | Off by default. When enabled, request three nearby frames where supported, group successful originals as one logical shot, initially show the first successful frame, and let the user choose manually. No eye detection or automatic frame ranking. Preserve partial groups and show actual count. Validate timing rather than assuming RAW prebuffer access. See D-025. |
 | C06 | Raw burst stacking | P5 | 218 | Research aligned 16-32-frame low-light and zoom stacks with motion rejection, bounded memory, and fewer-frame fallback. Ship only measured improvements without promising zero noise or larger-sensor equivalence. |
 | C07 | Disposable flash rendering | P1 | 34 | Offer Auto, On, and Off flash with a disposable-inspired exposure and warmth profile; test roughly 1/60-1/100s on supported configurations and gracefully accept hardware limits. |
 | C08 | Party Drag | P4 | 82 | Provide an intentional motion-blur and slow-sync-flash look targeting about 1/15s. Preserve a sharp-subject option or clear fallback when genuine flash timing is unavailable. |

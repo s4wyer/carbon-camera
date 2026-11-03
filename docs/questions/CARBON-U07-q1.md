@@ -2,10 +2,23 @@
 
 **Ticket:** U07 — Brightline outside margin  
 **Source doc:** Halide §6  
-**Status:** Open  
+**Status:** Answered for Carbon by principal-approved product decision
 **Date filed:** 2024-11-03
 
-## What we need
+## Approved answer (2026-11-03)
+
+[D-025](../decisions/D-025-amateur-camera-defaults.md#u07-composition-guides)
+sets guides off by default, with optional rule-of-thirds lines at 1/3 and 2/3
+of the actual photo crop, using thin translucent white lines. Guides must align
+with exported composition; UI safe areas must not shift them. Golden-ratio and
+rabatment guides belong in advanced options with geometry specified separately
+before implementation. Validate alignment across orientations and crops.
+
+This is an approved Carbon decision, not recovered Halide geometry. It supersedes
+the historical provisional implementation, basic-grid blocker, and extraction
+request below. Advanced geometry and device verification remain pending.
+
+## Historical reference question
 
 For U07 ("Brightline outside margin"), the roadmap requires composition guide geometry from Halide:
 
