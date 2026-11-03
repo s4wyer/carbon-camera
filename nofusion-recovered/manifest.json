@@ -1,0 +1,1099 @@
+{
+  "source": "no-fusion-2.5.61-dev-build.ipa",
+  "source_sha256": "2d790239c1d3c09db2653ce4812c06ce26b03c716d47a76f2d6b8c023909bb48",
+  "files": [
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/0156edbce8ce9f3668dc0b7a703139dc3a35f4f8e014bdabaa13385913c5fcc5.lutbin",
+      "recovered_path": "originals/NFAsset.framework/0156edbce8ce9f3668dc0b7a703139dc3a35f4f8e014bdabaa13385913c5fcc5.lutbin",
+      "byte_count": 574992,
+      "sha256": "7f510604abbb9b13cb578634b62d5873177224b946752f862df493842c516c59",
+      "zip_crc32": "cede5ada"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/02198abeb11dd57e39be43e92b3455ecd6505bb6e22a2b60feeb25e53d8f2ab9.lutbin",
+      "recovered_path": "originals/NFAsset.framework/02198abeb11dd57e39be43e92b3455ecd6505bb6e22a2b60feeb25e53d8f2ab9.lutbin",
+      "byte_count": 250000,
+      "sha256": "7b7088dd14d9d0386dfc3d3a8286bed97326f644b5b378cceb73e809744ae30d",
+      "zip_crc32": "321fd6d3"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/18050bdcbea97ac25f18078a4b3a1a6a775ae852ffdae2e29dfe05175a06a33e.lutbin",
+      "recovered_path": "originals/NFAsset.framework/18050bdcbea97ac25f18078a4b3a1a6a775ae852ffdae2e29dfe05175a06a33e.lutbin",
+      "byte_count": 524288,
+      "sha256": "89bf07173006ca3a3048498549f189867cede5e1d7f7f36fe6955eabfd29b0c5",
+      "zip_crc32": "e75d8797"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/1f0a2e71be20d72bbdb134a7181b921caf6f21cf1b217b8f0346005ecbec5e8f.lutbin",
+      "recovered_path": "originals/NFAsset.framework/1f0a2e71be20d72bbdb134a7181b921caf6f21cf1b217b8f0346005ecbec5e8f.lutbin",
+      "byte_count": 574992,
+      "sha256": "42733df2fbf9f94aed7aab9e859329d25fa598ffd6854d811f4e859e05b85e26",
+      "zip_crc32": "0484f502"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/246df6bf673a0b576495931c898d5eba079bd9d595715eb46555914eeae8a9f6.lutbin",
+      "recovered_path": "originals/NFAsset.framework/246df6bf673a0b576495931c898d5eba079bd9d595715eb46555914eeae8a9f6.lutbin",
+      "byte_count": 574992,
+      "sha256": "c0875a689f614990534e16048792b063d7991b4e0fcf079e1a2621384546b5dd",
+      "zip_crc32": "570e12df"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/25b746015f41ff91387c2676383bb370ba67fc6f50db90eaa03ab36f1e26a83a.lutbin",
+      "recovered_path": "originals/NFAsset.framework/25b746015f41ff91387c2676383bb370ba67fc6f50db90eaa03ab36f1e26a83a.lutbin",
+      "byte_count": 524288,
+      "sha256": "17c50a76a5517219e5dc5f4d5203fe9bcb375a25967ecde701cea277169841d7",
+      "zip_crc32": "4b99d5a9"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/41743664a9e8bbabd4e1c84ecd16d81b772215f7526a8797e5217acddabe282c.lutbin",
+      "recovered_path": "originals/NFAsset.framework/41743664a9e8bbabd4e1c84ecd16d81b772215f7526a8797e5217acddabe282c.lutbin",
+      "byte_count": 524288,
+      "sha256": "decde0c23ae1264653aafaeea0d4379b0203612bfa56d6eb65e135f9b4ead1af",
+      "zip_crc32": "06d4b34f"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/685ed5807f1632c601976cfe6ebff38845d2fa1648daa0a9ce66729e6041242b.lutbin",
+      "recovered_path": "originals/NFAsset.framework/685ed5807f1632c601976cfe6ebff38845d2fa1648daa0a9ce66729e6041242b.lutbin",
+      "byte_count": 574992,
+      "sha256": "b0ffcc028096ec1e61e169b3ee5e7a9c3c52e0b025d7f79b79cf0878cc7fcc2c",
+      "zip_crc32": "a6bc173f"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/6fb657704d167f9095ac4d703d2ea8ef2d0180139ce16512a33a372aa8c0cf2e.lutbin",
+      "recovered_path": "originals/NFAsset.framework/6fb657704d167f9095ac4d703d2ea8ef2d0180139ce16512a33a372aa8c0cf2e.lutbin",
+      "byte_count": 524288,
+      "sha256": "def6aecc82d45f75ad301e6a760816585d6212adf92371e17c8103744e225c54",
+      "zip_crc32": "dbf83504"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/70a7e54e51d03e11ce5833944df379e4b4218e13170f69210e1f100f55a762e4.lutbin",
+      "recovered_path": "originals/NFAsset.framework/70a7e54e51d03e11ce5833944df379e4b4218e13170f69210e1f100f55a762e4.lutbin",
+      "byte_count": 574992,
+      "sha256": "0fe3187d0dcb0a9ed3ed72d39932fda96bac92d60f9f14747e6e742ef4c08cce",
+      "zip_crc32": "b02f4584"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/822d19ac28e6c421761039993fd843b076e232b9b90bbb2adf110ef159ff1673.lutbin",
+      "recovered_path": "originals/NFAsset.framework/822d19ac28e6c421761039993fd843b076e232b9b90bbb2adf110ef159ff1673.lutbin",
+      "byte_count": 524288,
+      "sha256": "5d06c715f1b294ad1dad01203d9961234c3cc69a215a95c7f01a6f115196633b",
+      "zip_crc32": "3c930c8b"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/8a14ae6faaddc31b4ea373f45c9dc7ffdd5377af2dd503bf23f34a7b16b6130b.lutbin",
+      "recovered_path": "originals/NFAsset.framework/8a14ae6faaddc31b4ea373f45c9dc7ffdd5377af2dd503bf23f34a7b16b6130b.lutbin",
+      "byte_count": 574992,
+      "sha256": "da4a13ecc354d2d444bb2f2fbe973356f7c94763408392fb39164b9554987fb0",
+      "zip_crc32": "d6a401b4"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/8a2a46d974182d531d4ae80c2ff0900d215dc987ca4cfac55100569c9e408a7f.lutbin",
+      "recovered_path": "originals/NFAsset.framework/8a2a46d974182d531d4ae80c2ff0900d215dc987ca4cfac55100569c9e408a7f.lutbin",
+      "byte_count": 524288,
+      "sha256": "16af31ffee61d579565932170bb6e7e1283d85a8bac461415a14a4a3374a2cf6",
+      "zip_crc32": "27d57a93"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/8b9d1d4f5399f0ca880be86880eebb336c4952864ed7eba94ea6d20e162c4e85.lutbin",
+      "recovered_path": "originals/NFAsset.framework/8b9d1d4f5399f0ca880be86880eebb336c4952864ed7eba94ea6d20e162c4e85.lutbin",
+      "byte_count": 524288,
+      "sha256": "6613e0d191e5a8556e7d78fffd6fbe7f584fa3a327100c98d0aa3c75ab10aa30",
+      "zip_crc32": "f49d5846"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/9fab23387aa2c5fe6024a54dab4cf2d9b3549152cdd489011b0e19051e335c5e.lutbin",
+      "recovered_path": "originals/NFAsset.framework/9fab23387aa2c5fe6024a54dab4cf2d9b3549152cdd489011b0e19051e335c5e.lutbin",
+      "byte_count": 524288,
+      "sha256": "3c2fb13c5fe538b5ffc3ae23f3b663d9cf824f308a72cb68d34cd25e202ef541",
+      "zip_crc32": "94573769"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/BW1.preset",
+      "recovered_path": "originals/NFAsset.framework/BW1.preset",
+      "byte_count": 1157,
+      "sha256": "28a4efaa8f7bbc77bf6dcf13bf5c0ec00767319f34ad1a959c7b925b970b7e62",
+      "zip_crc32": "d57682bd"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/BW2.preset",
+      "recovered_path": "originals/NFAsset.framework/BW2.preset",
+      "byte_count": 1170,
+      "sha256": "61318db974b940113f7e67922aaed92571e71ef4f941c79dbb6267ca75c2f258",
+      "zip_crc32": "e637fb93"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/BW3.preset",
+      "recovered_path": "originals/NFAsset.framework/BW3.preset",
+      "byte_count": 1156,
+      "sha256": "4127d7e9826baed096d628de0a15c9c93aed5f6c9506230e1aaaa1a5c14dd5c0",
+      "zip_crc32": "6b2087fb"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/BW4.preset",
+      "recovered_path": "originals/NFAsset.framework/BW4.preset",
+      "byte_count": 1157,
+      "sha256": "9fb60c3e2266f90f83865102c2a62a83e08e3de44ed3417996120535e5b40b6d",
+      "zip_crc32": "6a3a3fbd"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/CC.preset",
+      "recovered_path": "originals/NFAsset.framework/CC.preset",
+      "byte_count": 1155,
+      "sha256": "7fe15a6a630264245646ce15b037584f615b89d95da6ef4401b338be1aa25b27",
+      "zip_crc32": "b3cf43c3"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/F1.preset",
+      "recovered_path": "originals/NFAsset.framework/F1.preset",
+      "byte_count": 1172,
+      "sha256": "ff4619223e581735941b8012c63d2b8d5d67d42465f710aea895cf42fd2ba68f",
+      "zip_crc32": "b1a2f909"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/F2.preset",
+      "recovered_path": "originals/NFAsset.framework/F2.preset",
+      "byte_count": 1144,
+      "sha256": "2104dee008c24eb46cfe4930018fc6a94a84b03fbd7a1fd21eb745a01f9df06c",
+      "zip_crc32": "fa5fe242"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/F3.preset",
+      "recovered_path": "originals/NFAsset.framework/F3.preset",
+      "byte_count": 1154,
+      "sha256": "5140af631ee6d233e9f5fd217fe41cf8304ff86d370757cf119f741a8a2e171e",
+      "zip_crc32": "648987c0"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/F4.preset",
+      "recovered_path": "originals/NFAsset.framework/F4.preset",
+      "byte_count": 1149,
+      "sha256": "8d988b6c5e770459b8cf06bf84a4a4ade93629862766e5c6ec93cd6e6de4d391",
+      "zip_crc32": "217b495d"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/GR.preset",
+      "recovered_path": "originals/NFAsset.framework/GR.preset",
+      "byte_count": 1149,
+      "sha256": "914ef8308257a1047a1a8015542ecb6903eb961b19e1c035d1e0c01c7b1957d7",
+      "zip_crc32": "d89eb158"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/H1.preset",
+      "recovered_path": "originals/NFAsset.framework/H1.preset",
+      "byte_count": 1145,
+      "sha256": "51ccc369d010243aa8a0b8480ef445d7a6f02e0d3045f8de785eb31376c4145d",
+      "zip_crc32": "c6fe613d"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/H2.preset",
+      "recovered_path": "originals/NFAsset.framework/H2.preset",
+      "byte_count": 1158,
+      "sha256": "b7cf4d5eb8ef967254a8902c9779d9d1d3612a5504c7a73bf50a308fc3e265ed",
+      "zip_crc32": "8740ba12"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/K1.preset",
+      "recovered_path": "originals/NFAsset.framework/K1.preset",
+      "byte_count": 1165,
+      "sha256": "227998829ba81c72431d55b97ddf476c089eaf6b51e0ee06cf3171a8f0daee18",
+      "zip_crc32": "c1a31827"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/K2.preset",
+      "recovered_path": "originals/NFAsset.framework/K2.preset",
+      "byte_count": 1171,
+      "sha256": "266ec3028bc546aa9bf2b7bb60886862bbd18d38e40d6cd1964b62622935b182",
+      "zip_crc32": "e67591f7"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/K3.preset",
+      "recovered_path": "originals/NFAsset.framework/K3.preset",
+      "byte_count": 1161,
+      "sha256": "61bd98c5c92c20f6d3a6eba31343ac15c7def7174fc6ae272a3112776b9d0461",
+      "zip_crc32": "ed884816"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/K4.preset",
+      "recovered_path": "originals/NFAsset.framework/K4.preset",
+      "byte_count": 1163,
+      "sha256": "4053282d540beb48178aa739fb0a87f597d7473d6d2a0865b061cbf9d3c005d8",
+      "zip_crc32": "b10b45c1"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/K5.preset",
+      "recovered_path": "originals/NFAsset.framework/K5.preset",
+      "byte_count": 1150,
+      "sha256": "24056d88b5bc08b3deb627932be5a2c9fd9d429038493ead87ee9fe25fe6538b",
+      "zip_crc32": "dda1a22d"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/LC.preset",
+      "recovered_path": "originals/NFAsset.framework/LC.preset",
+      "byte_count": 1160,
+      "sha256": "d8487cd13df68facd916662684bd750dfa109c08025ce68b936282bac5956cc6",
+      "zip_crc32": "82ceb637"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/NC.preset",
+      "recovered_path": "originals/NFAsset.framework/NC.preset",
+      "byte_count": 1156,
+      "sha256": "9e9805cfdad54552f7ac5ffd0dbd6f6b5da161b61d271f8385e76ce640c694a2",
+      "zip_crc32": "882064a5"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/NN.preset",
+      "recovered_path": "originals/NFAsset.framework/NN.preset",
+      "byte_count": 1170,
+      "sha256": "5960ad702b441ab9e6457708dc013abfcfe4e9baba1d1a8207d7e17279bddd84",
+      "zip_crc32": "311535e0"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/a75d5f375443e699c1f4b48cb6f5cafc914abf5934d6764fa3461c770f278b75.lutbin",
+      "recovered_path": "originals/NFAsset.framework/a75d5f375443e699c1f4b48cb6f5cafc914abf5934d6764fa3461c770f278b75.lutbin",
+      "byte_count": 524288,
+      "sha256": "47e1f096cfb3188a2b998796e5ace6615168d4ddd95cd03b78d850890e0501d2",
+      "zip_crc32": "e0a8502d"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/b19bcf382607739a7c0ab2b89e57e9b98632bc0b90cc57a659011b1be2cd9d8a.lutbin",
+      "recovered_path": "originals/NFAsset.framework/b19bcf382607739a7c0ab2b89e57e9b98632bc0b90cc57a659011b1be2cd9d8a.lutbin",
+      "byte_count": 524288,
+      "sha256": "44b4c7d8f9e2aee2d685d59bafb1f5d63045ac1338811101cece6d4da24d10cb",
+      "zip_crc32": "c4d23811"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/b356cc9c1eaae54b9de3d58c4aea5f7a780a96133dbe213b735d69a89099773a.lutbin",
+      "recovered_path": "originals/NFAsset.framework/b356cc9c1eaae54b9de3d58c4aea5f7a780a96133dbe213b735d69a89099773a.lutbin",
+      "byte_count": 250000,
+      "sha256": "4d3819e8d43db9c7be87f8deeb2680db8201019c7687d75addfcd36e461c9674",
+      "zip_crc32": "5d39d951"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/b9246fa3f057253c66021c1ee9afd798c7351b2b73f4ae0744db9d4df79d3b14.lutbin",
+      "recovered_path": "originals/NFAsset.framework/b9246fa3f057253c66021c1ee9afd798c7351b2b73f4ae0744db9d4df79d3b14.lutbin",
+      "byte_count": 250000,
+      "sha256": "e620a35f6c72abfedf41ca52a3fc566984b6c90d7e2a44a1920d3f05a328bb15",
+      "zip_crc32": "1e0deb08"
+    },
+    {
+      "archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/e2c341b28e5e7de6a886e731c51ed88208979e8d19371555ef8dc7db458d620a.lutbin",
+      "recovered_path": "originals/NFAsset.framework/e2c341b28e5e7de6a886e731c51ed88208979e8d19371555ef8dc7db458d620a.lutbin",
+      "byte_count": 524288,
+      "sha256": "bb7ae87003a542c754883864639ebc3ac4c2c179cb9f67a2fe1c7fe98e986f11",
+      "zip_crc32": "5fdb98c2"
+    }
+  ],
+  "presets": [
+    {
+      "preset_file": "BW1.preset",
+      "id": "BW1",
+      "name": "L4",
+      "description": "Eternal",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": false,
+      "lut_file": "25b746015f41ff91387c2676383bb370ba67fc6f50db90eaa03ab36f1e26a83a.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "17c50a76a5517219e5dc5f4d5203fe9bcb375a25967ecde701cea277169841d7",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          9.202957153320312e-05,
+          0.99853515625
+        ],
+        [
+          9.202957153320312e-05,
+          0.9951171875
+        ],
+        [
+          0.00033593177795410156,
+          0.9970703125
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        9.202957153320312e-05,
+        9.202957153320312e-05,
+        0.00033593177795410156,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9970703125,
+        0.98974609375,
+        0.990234375,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "BW2.preset",
+      "id": "BW2",
+      "name": "BW1",
+      "description": "Mono Hi Contrast",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": true,
+      "lut_file": "41743664a9e8bbabd4e1c84ecd16d81b772215f7526a8797e5217acddabe282c.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "decde0c23ae1264653aafaeea0d4379b0203612bfa56d6eb65e135f9b4ead1af",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.98876953125
+        ],
+        [
+          0.0,
+          0.98876953125
+        ],
+        [
+          0.0,
+          0.98876953125
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.98876953125,
+        0.98876953125,
+        0.98876953125,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "BW3.preset",
+      "id": "BW3",
+      "name": "BW2",
+      "description": "Mono",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": true,
+      "lut_file": "8a2a46d974182d531d4ae80c2ff0900d215dc987ca4cfac55100569c9e408a7f.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "16af31ffee61d579565932170bb6e7e1283d85a8bac461415a14a4a3374a2cf6",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.98388671875
+        ],
+        [
+          0.0,
+          0.98388671875
+        ],
+        [
+          0.0,
+          0.98388671875
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.98388671875,
+        0.98388671875,
+        0.98388671875,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "BW4.preset",
+      "id": "BW4",
+      "name": "BW3",
+      "description": "Sepia",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": true,
+      "lut_file": "b19bcf382607739a7c0ab2b89e57e9b98632bc0b90cc57a659011b1be2cd9d8a.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "44b4c7d8f9e2aee2d685d59bafb1f5d63045ac1338811101cece6d4da24d10cb",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.9716796875
+        ],
+        [
+          0.0,
+          0.94921875
+        ],
+        [
+          0.0,
+          0.87890625
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9716796875,
+        0.94921875,
+        0.87890625,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "CC.preset",
+      "id": "CC",
+      "name": "CC",
+      "description": "Fuji Classic Chrome",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "e2c341b28e5e7de6a886e731c51ed88208979e8d19371555ef8dc7db458d620a.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "bb7ae87003a542c754883864639ebc3ac4c2c179cb9f67a2fe1c7fe98e986f11",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.9922000169754028
+        ],
+        [
+          0.0,
+          0.9922000169754028
+        ],
+        [
+          0.0,
+          0.9882000088691711
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9882000088691711,
+        0.9882000088691711,
+        0.9882000088691711,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "F1.preset",
+      "id": "F1",
+      "name": "HS",
+      "description": "Hasselblad X5 Sanner Blue/Yellow",
+      "cube_size": 33,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "246df6bf673a0b576495931c898d5eba079bd9d595715eb46555914eeae8a9f6.lutbin",
+      "byte_count": 574992,
+      "actual_sha256": "c0875a689f614990534e16048792b063d7991b4e0fcf079e1a2621384546b5dd",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.02694699913263321,
+          0.9746090173721313
+        ],
+        [
+          0.009856999851763248,
+          0.965300977230072
+        ],
+        [
+          0.003539999946951866,
+          0.9580680131912231
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.027831999585032463,
+        0.02157600037753582,
+        0.01843300089240074,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9459220170974731,
+        0.957548975944519,
+        0.954131007194519,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "F2.preset",
+      "id": "F2",
+      "name": "L1",
+      "description": "Classic",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "6fb657704d167f9095ac4d703d2ea8ef2d0180139ce16512a33a372aa8c0cf2e.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "def6aecc82d45f75ad301e6a760816585d6212adf92371e17c8103744e225c54",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.003021240234375,
+          0.9619140625
+        ],
+        [
+          0.00469970703125,
+          0.986328125
+        ],
+        [
+          0.009429931640625,
+          0.9501953125
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.003021240234375,
+        0.00469970703125,
+        0.009429931640625,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9619140625,
+        0.98388671875,
+        0.94677734375,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "F3.preset",
+      "id": "F3",
+      "name": "L2",
+      "description": "Chrome",
+      "cube_size": 32,
+      "lut_intensity": 0.9100000262260437,
+      "mono": null,
+      "lut_file": "8b9d1d4f5399f0ca880be86880eebb336c4952864ed7eba94ea6d20e162c4e85.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "6613e0d191e5a8556e7d78fffd6fbe7f584fa3a327100c98d0aa3c75ab10aa30",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0618896484375,
+          0.92919921875
+        ],
+        [
+          0.0262298583984375,
+          0.9482421875
+        ],
+        [
+          0.035369873046875,
+          0.93359375
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0662841796875,
+        0.05645751953125,
+        0.05755615234375,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.92431640625,
+        0.9482421875,
+        0.93359375,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "F4.preset",
+      "id": "F4",
+      "name": "L3",
+      "description": "Contemporary",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "9fab23387aa2c5fe6024a54dab4cf2d9b3549152cdd489011b0e19051e335c5e.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "3c2fb13c5fe538b5ffc3ae23f3b663d9cf824f308a72cb68d34cd25e202ef541",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.00445556640625,
+          0.98046875
+        ],
+        [
+          0.00445556640625,
+          0.984375
+        ],
+        [
+          0.00445556640625,
+          0.9794921875
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.00445556640625,
+        0.00445556640625,
+        0.00445556640625,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.97509765625,
+        0.98291015625,
+        0.9794921875,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "GR.preset",
+      "id": "GR",
+      "name": "G1",
+      "description": "GR Negative",
+      "cube_size": 33,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "685ed5807f1632c601976cfe6ebff38845d2fa1648daa0a9ce66729e6041242b.lutbin",
+      "byte_count": 574992,
+      "actual_sha256": "b0ffcc028096ec1e61e169b3ee5e7a9c3c52e0b025d7f79b79cf0878cc7fcc2c",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "last_rgba_sample": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "H1.preset",
+      "id": "H1",
+      "name": "G3",
+      "description": "GR Blue",
+      "cube_size": 33,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "70a7e54e51d03e11ce5833944df379e4b4218e13170f69210e1f100f55a762e4.lutbin",
+      "byte_count": 574992,
+      "actual_sha256": "0fe3187d0dcb0a9ed3ed72d39932fda96bac92d60f9f14747e6e742ef4c08cce",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.9283440113067627
+        ],
+        [
+          0.0,
+          0.9424120187759399
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.09140200167894363,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9170820116996765,
+        0.9193099737167358,
+        0.9273980259895325,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "H2.preset",
+      "id": "H2",
+      "name": "K1",
+      "description": "Kodak Portra 400",
+      "cube_size": 33,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "0156edbce8ce9f3668dc0b7a703139dc3a35f4f8e014bdabaa13385913c5fcc5.lutbin",
+      "byte_count": 574992,
+      "actual_sha256": "7f510604abbb9b13cb578634b62d5873177224b946752f862df493842c516c59",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.007350000087171793,
+          0.9969789981842041
+        ],
+        [
+          0.002512000035494566,
+          0.97156822681427
+        ],
+        [
+          0.005084000062197447,
+          0.9999390244483948
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.013058999553322792,
+        0.002512000035494566,
+        0.005084000062197447,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9397609829902649,
+        0.9702020287513733,
+        0.9999390244483948,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "K1.preset",
+      "id": "K1",
+      "name": "K2",
+      "description": "Kodak Portra 400 Yellow",
+      "cube_size": 25,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "02198abeb11dd57e39be43e92b3455ecd6505bb6e22a2b60feeb25e53d8f2ab9.lutbin",
+      "byte_count": 250000,
+      "actual_sha256": "7b7088dd14d9d0386dfc3d3a8286bed97326f644b5b378cceb73e809744ae30d",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.9803919792175293
+        ],
+        [
+          0.0,
+          0.9176470041275024
+        ],
+        [
+          0.015685999765992165,
+          0.9372550249099731
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.01960800029337406,
+        0.031373001635074615,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9019610285758972,
+        0.9176470041275024,
+        0.9294120073318481,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "K2.preset",
+      "id": "K2",
+      "name": "K3",
+      "description": "Kodak Ultramax 400",
+      "cube_size": 25,
+      "lut_intensity": 0.9100000262260437,
+      "mono": null,
+      "lut_file": "b356cc9c1eaae54b9de3d58c4aea5f7a780a96133dbe213b735d69a89099773a.lutbin",
+      "byte_count": 250000,
+      "actual_sha256": "4d3819e8d43db9c7be87f8deeb2680db8201019c7687d75addfcd36e461c9674",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.058823999017477036,
+          1.0
+        ],
+        [
+          0.035294000059366226,
+          0.9411759972572327
+        ],
+        [
+          0.02352900058031082,
+          1.0
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.06666699796915054,
+        0.035294000059366226,
+        0.02352900058031082,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9607840180397034,
+        0.9333329796791077,
+        0.9960780143737793,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "K3.preset",
+      "id": "K3",
+      "name": "K4",
+      "description": "Kodak Pro Image 100",
+      "cube_size": 25,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "b9246fa3f057253c66021c1ee9afd798c7351b2b73f4ae0744db9d4df79d3b14.lutbin",
+      "byte_count": 250000,
+      "actual_sha256": "e620a35f6c72abfedf41ca52a3fc566984b6c90d7e2a44a1920d3f05a328bb15",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.015685999765992165,
+          1.0
+        ],
+        [
+          0.01176500041037798,
+          0.9803919792175293
+        ],
+        [
+          0.02745099924504757,
+          0.9960780143737793
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.08235300332307816,
+        0.09019599854946136,
+        0.07843100279569626,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9803919792175293,
+        0.9803919792175293,
+        0.9882349967956543,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "K4.preset",
+      "id": "K4",
+      "name": "K5",
+      "description": "Kodak Portra 200 Gold",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "a75d5f375443e699c1f4b48cb6f5cafc914abf5934d6764fa3461c770f278b75.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "47e1f096cfb3188a2b998796e5ace6615168d4ddd95cd03b78d850890e0501d2",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0006409999914467335,
+          0.9262080192565918
+        ],
+        [
+          0.0,
+          0.8914790153503418
+        ],
+        [
+          0.0,
+          0.8993229866027832
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0078119998797774315,
+        0.0,
+        0.011749000288546085,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9149479866027832,
+        0.8758540153503418,
+        0.8914790153503418,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "K5.preset",
+      "id": "K5",
+      "name": "K6",
+      "description": "Kodak 5207",
+      "cube_size": 33,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "8a14ae6faaddc31b4ea373f45c9dc7ffdd5377af2dd503bf23f34a7b16b6130b.lutbin",
+      "byte_count": 574992,
+      "actual_sha256": "da4a13ecc354d2d444bb2f2fbe973356f7c94763408392fb39164b9554987fb0",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.9722899794578552
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.027741000056266785,
+        0.0,
+        0.04522800073027611,
+        1.0
+      ],
+      "last_rgba_sample": [
+        1.0,
+        0.9722899794578552,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "LC.preset",
+      "id": "LC",
+      "name": "G2",
+      "description": "GR Positive",
+      "cube_size": 33,
+      "lut_intensity": 0.9100000262260437,
+      "mono": null,
+      "lut_file": "1f0a2e71be20d72bbdb134a7181b921caf6f21cf1b217b8f0346005ecbec5e8f.lutbin",
+      "byte_count": 574992,
+      "actual_sha256": "42733df2fbf9f94aed7aab9e859329d25fa598ffd6854d811f4e859e05b85e26",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "last_rgba_sample": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "NC.preset",
+      "id": "NC",
+      "name": "NC",
+      "description": "Fuji Neutral Classic",
+      "cube_size": 32,
+      "lut_intensity": 1.0,
+      "mono": null,
+      "lut_file": "822d19ac28e6c421761039993fd843b076e232b9b90bbb2adf110ef159ff1673.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "5d06c715f1b294ad1dad01203d9961234c3cc69a215a95c7f01a6f115196633b",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.980400025844574
+        ],
+        [
+          0.007799999788403511,
+          0.9764999747276306
+        ],
+        [
+          0.0,
+          0.9961000084877014
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.011800000444054604,
+        0.011800000444054604,
+        0.011800000444054604,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.9764999747276306,
+        0.9764999747276306,
+        0.9725000262260437,
+        1.0
+      ]
+    },
+    {
+      "preset_file": "NN.preset",
+      "id": "NN",
+      "name": "NN",
+      "description": "Fuji Nostalgic Negative",
+      "cube_size": 32,
+      "lut_intensity": 0.831043541431427,
+      "mono": null,
+      "lut_file": "18050bdcbea97ac25f18078a4b3a1a6a775ae852ffdae2e29dfe05175a06a33e.lutbin",
+      "byte_count": 524288,
+      "actual_sha256": "89bf07173006ca3a3048498549f189867cede5e1d7f7f36fe6955eabfd29b0c5",
+      "filename_matches_raw_sha256": false,
+      "rgb_ranges": [
+        [
+          0.0,
+          0.980400025844574
+        ],
+        [
+          0.015699999406933784,
+          0.9685999751091003
+        ],
+        [
+          0.0,
+          0.9764999747276306
+        ]
+      ],
+      "alpha": 1.0,
+      "first_rgba_sample": [
+        0.023499999195337296,
+        0.023499999195337296,
+        0.023499999195337296,
+        1.0
+      ],
+      "last_rgba_sample": [
+        0.980400025844574,
+        0.9685999751091003,
+        0.9607999920845032,
+        1.0
+      ]
+    }
+  ],
+  "framework_archive_path": "Payload/No Fusion.app/Frameworks/NFAsset.framework/",
+  "unreferenced_luts": [],
+  "verification": {
+    "originals_match_archive_bytes": true,
+    "all_preset_references_resolve": true,
+    "all_lengths_match_reference_and_cube_size": true,
+    "all_luts_roundtrip_little_endian_float32_quads": true,
+    "all_fourth_components_equal_one": true,
+    "all_first_three_components_in_zero_one": true,
+    "xml_presets_roundtrip_to_original_values": true
+  }
+}

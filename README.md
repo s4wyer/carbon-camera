@@ -55,7 +55,7 @@ carbon-plan/
 
 ✅ **Default preset rationale** (`docs/decisions/D-006-natural-preset.md`): "Natural" preset (Process Zero film base, renamed/tuned for amateurs, portrait-optimized).
 
-✅ **Question escalation** (`docs/questions/README.md`): 15 known reference gaps filed (composition guide geometry, flash default, Image Lab slider, volume-shutter dedup, NF LUT binaries, etc.).
+✅ **Question escalation** ([register](docs/questions/README.md), reviewed November 3, 2026): 15 tracked questions; **2 answered, 13 open**. Carbon's Auto flash default is decided; No Fusion LUT originals and serialized byte layout are available. Remaining runtime verification is documented with each answer.
 
 ⏸️ **Native build:** Scaffold exists, but cannot compile without Mac + Xcode.
 
@@ -65,7 +65,7 @@ carbon-plan/
 2. **iPhone iOS 18.0+:** Device capability measurement (SET03), capture validation (SET04), and all camera work require physical hardware.
 3. **Approved design assets:** Splash reference, asset manifest, fonts, screen comparisons (SET06).
 4. **Reference fixture photos:** Test photos (people in frame) with Halide/Lapse/No Fusion outputs for comparison fixtures.
-5. **LUT binaries:** Halide `recovery/resources/luts/*.raw` (33³ half-float RGB) and No Fusion `.lutbin` resources cited in docs but not extracted.
+5. **LUT integration and verification:** Asset availability is answered: [27 original Halide `.ccube` files](halide-recovered-ccube/README.txt) and [20 original No Fusion LUTs with 20 presets](nofusion-recovered/README.md) are present. Halide files are compressed originals, not decoded `.raw` payloads. Decoding/loading and rendering parity still require verification.
 
 ## Product goal (tie-breaker for all decisions)
 

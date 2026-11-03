@@ -1,5 +1,7 @@
 # SET01 completion report
 
+**Question/asset update — November 3, 2026:** This is a historical SET01 report. The [current register](questions/README.md) has **2 answered questions and 13 open**. Carbon's flash default is Auto (D-002); 20 original No Fusion LUTs/presets and their byte layout are recovered. Another 27 original compressed Halide `.ccube` files are available. Statements below about missing binaries describe the original report state; integration and rendering verification remain pending.
+
 **Ticket:** SET01 — Reproducible native iOS project  
 **Type:** B (build-own)  
 **Status:** ⏸️ Scaffold complete, native build blocked by environment  
@@ -211,15 +213,15 @@ Until then, SET01 status is **⚙️ logic/data complete, device TBD**.
 
 ## Open questions (from docs/questions/README.md)
 
-15 questions filed, blocking various M1 tickets:
+15 questions tracked; current review: 2 answered, 13 open:
 - Composition guide geometry (U07)
-- Flash default (C07)
+- **Answered — Flash default (C07):** Carbon uses Auto per D-002; Halide's own default remains unknown. [Explanation](questions/CARBON-C07-q1.md).
 - Image Lab slider (R08)
 - Film tab sliders (R07)
 - Per-Look custom values (SET12)
 - Volume-shutter dedup (U09)
 - Grain render order in NF (R05)
-- NF LUT binaries (SET12)
+- **Answered — NF LUT binaries and byte layout (SET12):** 20 original LUTs/presets recovered; little-endian float32 quadruples, length `size^3 * 16`. Runtime interpretation remains unverified. [Explanation](questions/CARBON-SET12-q2.md).
 - NF HEIF+ quality table (SET11)
 - NF default preset (SET11)
 - Lapse zoom ramp (C10)
@@ -228,7 +230,7 @@ Until then, SET01 status is **⚙️ logic/data complete, device TBD**.
 - Pre-shutter RAW frames (C06)
 - Camera Control detail (U10)
 
-None of these questions block *this* report. They block M1 device work.
+None of these questions block *this* report. The remaining open questions block their associated ticket sub-behaviors.
 
 ## Commit message (when on Mac)
 

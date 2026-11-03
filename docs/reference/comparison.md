@@ -38,18 +38,21 @@ Every row carries a decision ID that is also referenced from `docs/decisions/`.
 | C24 | Frame rate | not recovered | request min=max=1/30 s (`L§1`) | helper only (15 fps, not the still path) (`N§9`) | **L request** (`D-009`) | Request, not guarantee — recorded as such in capabilities. |
 | C25 | Negative / re-edit | `CIRAWFilter` redevelop path (`H§1`) | re-render from original encoded data (`L§10`) | RAW retained under capture ID ("master tape"), re-editable (`N§5`) | **Ours: immutable `RecipeVersion` + retained source; N's re-edit promise, our schema** (`D-023`) | N does not define a schema; roadmap §6 does. |
 
-## Behaviours the documents mark unknown (filed as questions, not inferred)
+## Reference questions and recorded answers
+
+Status reviewed November 3, 2026: 2 answered within the stated scope, 13 open.
+See the [question register](../questions/README.md) for current statuses and explanations.
 
 | Gap | Doc + section | Question file |
 |---|---|---|---|
 | Composition guide geometry (thirds/golden/rabatment coordinates, line widths) | H §6 | `docs/questions/CARBON-U07-q1.md` |
-| Halide flash state/default | H §8 | `docs/questions/CARBON-C07-q1.md` |
+| Flash default: **Answered for Carbon** (`.auto`, D-002/C11); Halide's own default remains unknown | H §8; D-002 | [CARBON-C07-q1.md](../questions/CARBON-C07-q1.md) |
 | Halide Image Lab exposure slider range/mapping | H §1 | `docs/questions/CARBON-R08-q1.md` |
 | Halide Film UI slider bounds | H §3 | `docs/questions/CARBON-R07-q1.md` |
 | Per-Look persisted customisation values | H §2, §3 | `docs/questions/CARBON-SET12-q1.md` |
 | Volume-shutter dedup window / event mapping | H §7 | `docs/questions/CARBON-U09-q1.md` |
 | NF render order for grain relative to `StyleFilter` in every mode | N §3 | `docs/questions/CARBON-R05-q1.md` |
-| NF preset LUT binaries + `.lutbin` layout | N §4 | `docs/questions/CARBON-SET12-q2.md` |
+| NF preset LUT binaries + `.lutbin` layout: **Answered** (20 recovered originals; little-endian float32 quadruples); runtime interpretation remains unverified | N §4; recovered asset package | [CARBON-SET12-q2.md](../questions/CARBON-SET12-q2.md) |
 | NF HEIF+ encoder quality table | N §1 | `docs/questions/CARBON-SET11-q1.md` |
 | NF selected default preset/format (clean install) | N §9 | `docs/questions/CARBON-SET11-q2.md` |
 | Lapse zoom ramp-rate policy | L §1 | `docs/questions/CARBON-C10-q1.md` |

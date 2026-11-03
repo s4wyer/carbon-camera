@@ -2,6 +2,8 @@
 
 Updated November 3, 2024. One entry per completed or blocked ticket.
 
+**Question status update — November 3, 2026:** Of 15 tracked questions, **2 are answered and 13 remain open**. [C07](questions/CARBON-C07-q1.md): Carbon's default is Auto per D-002; Halide's default remains unknown. [SET12-q2](questions/CARBON-SET12-q2.md): 20 No Fusion LUTs/presets and their serialized byte layout are recovered. Also available: 27 original compressed Halide `.ccube` files. These answers resolve the default/asset questions; they do not establish implementation or device verification. See the [question register](questions/README.md). The milestone evidence below retains its original report date.
+
 **Legend:** ✅ = verified on device | ⚙️ = logic/data complete, device TBD | 🔄 = in progress | ⏸️ = blocked (question) | ❌ = failed
 
 ---

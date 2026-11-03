@@ -29,6 +29,8 @@ targets:
       - path: Sources/CarbonKit
     resources:
       - path: Resources/Assets.xcassets
+      - path: Resources/LUTs
+        type: folder
     info:
       path: Sources/CarbonApp/Info.plist
       properties:
