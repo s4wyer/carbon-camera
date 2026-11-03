@@ -118,3 +118,4 @@ print(iphones[0]["udid"] if iphones else "")')
       - name: Check asset integrity
         run: |
           python ci/check_assets.py
+# Trigger CI check
