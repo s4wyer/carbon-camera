@@ -1,6 +1,6 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 // SET01 — Reproducible native iOS project.
-// Baseline: iOS 18.0 (planning assumption validated in SET03), Swift 5.9, Xcode 16.
+// Baseline: iOS 18.0 (planning assumption validated in SET03), Swift 6.0, Xcode 16.
 // No third-party dependencies. Everything below is Apple SDK only.
 import PackageDescription
 
