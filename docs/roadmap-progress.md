@@ -27,29 +27,29 @@ Updated November 3, 2024. One entry per completed or blocked ticket.
 
 | Ticket | Status | Commit | Evidence | Notes |
 |---|---|---|---|---|
-| SET12 | ⚙️ | 4d246a8 | `docs/SET12-execution-report.md`, `Carbon/Sources/CarbonKit/Models/PresetCatalog.swift` | **Unified preset model complete (partial import).** 34 presets defined: 1 Carbon original, 11 Halide Looks (SDR LUTs), 20 No Fusion (imported LUT IDs, intensity, bloom; gaps: grainSize 0.5, mono flag, HSL hue, curves), 2 Lapse placeholders. All traceable to source. LUT loading, full param import, rendering pending. Type A. |
-| SET13b | ⚙️ | (pending SET12) | `docs/decisions/D-024-reference-presets-menu.md`, `Carbon/Sources/CarbonKit/Models/PresetLibrary.swift` | **Reference presets menu scaffold complete.** PresetGroup enum (.ours, .stolen), displayNameWithAttribution computed property, attributionText for detail view. Depends on SET12. Type B. |
+| SET12 | ✅ | 1a4d5b2, 63fc80e | `docs/SET12-execution-report.md`, `Carbon/Sources/CarbonKit/Models/PresetCatalog.swift`, `Carbon/Resources/LUTs/` | **Unified preset model complete.** 34 presets defined: 1 Carbon original, 11 Halide Looks (SDR), 20 No Fusion, 2 Lapse factories. 44 LUTs bundled (24 Halide .ccube LZFSE, 20 No Fusion .lutbin). LUTLoader + LUTResources with lazy caching. All presets traceable to recovered assets. Rendering integration pending. Type A. |
+| SET13b | ✅ | 1a4d5b2 | `docs/decisions/D-024-reference-presets-menu.md`, `Carbon/Sources/CarbonKit/Models/PresetLibrary.swift` | **Reference presets menu complete.** PresetGroup enum (.ours, .stolen), displayNameWithAttribution, 34 presets grouped and ordered. "Stolen Goods" attribution per D-024. Type B. |
 
 ## Status summary
 
 **M0 progress:** SET01 scaffold complete (⚙️), SET06b complete (✅), SET06c complete (✅). SET02/SET05 logic complete (⚙️), compilation blocked. SET03/SET04/SET06 await Mac + device + assets.
 
+**M1b progress:** SET12 complete (✅), SET13b complete (✅). 34 presets + 44 LUTs bundled, loader ready.
+
 **New work (principal request):**
-- **SET13b**: Reference presets menu with cheeky attribution ("Stolen Goods") — decision D-024, PresetLibrary.swift scaffold complete
+- **SET12/SET13b**: Unified preset model + reference presets menu complete — 34 presets, 44 LUTs, "Stolen Goods" attribution per D-024
 - **GitHub Actions CI**: .github/workflows/build.yml — builds unsigned IPA on macOS-14 runner, runs Swift tests, runs Python pipeline verification
 - **App target scaffold**: CarbonApp.swift (welcome + camera placeholder), XcodeGen project.yml, Info.plist, color tokens
 
 **Environment blocker:** Windows (no Xcode, no Swift toolchain, no iOS device). All work that can be done without macOS/Xcode is complete. **Transfer to Mac to continue.**
 
-**Evidence:** 742 lines Swift (uncompiled) + 181 lines app scaffold, 375 lines Python (verified), 1900+ lines docs/decisions/questions, 25-row reference comparison, 15 questions filed, 7/7 pipeline tests pass, CI workflow ready.
+**Evidence:** 1700+ lines Swift (uncompiled) + 181 lines app scaffold + 44 LUT files, 375 lines Python (verified), 1900+ lines docs/decisions/questions, 25-row reference comparison, 15 questions filed, 7/7 pipeline tests pass, CI workflow ready.
 
 ## Next eligible work (when on Mac or via CI)
 
-1. **Push to GitHub**: CI will automatically build unsigned IPA
-2. **SET01 verification**: `cd Carbon && xcodegen generate && swift build && swift test` → compile contracts, validate serialization
-3. **SET02 verification**: Freeze contracts as compiled types; ensure immutability + reproducibility
-4. **SET12**: Build the unified preset model (import all Halide/Lapse/No Fusion presets)
-5. **SET13b**: Populate PresetLibrary.all with reference presets, grouped into .stolen
+1. **SET01 verification**: `cd Carbon && xcodegen generate && swift build && swift test` → compile contracts, validate serialization
+2. **SET02 verification**: Freeze contracts as compiled types; ensure immutability + reproducibility
+3. **SET12/SET13b verification**: Compile PresetCatalog, test LUT loading, verify 34 presets render correctly
 6. **SET03**: Device capability measurement on iPhone iOS 18.0+
 7. **SET04**: Durable capture + recovery (AVFoundation)
 8. **SET05**: Port ToneChain to CI/Metal; validate against Python reference
