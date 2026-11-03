@@ -37,11 +37,7 @@ jobs:
           xcodebuild -version
 
           # Pick a concrete simulator that actually exists on this runner image
-          DEST=$(xcrun simctl list devices available --json \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; \
-names=[x for v in d.values() for x in v if x.get("isAvailable")]; \
-iphones=[x for x in names if "iPhone" in x["name"]]; \
-print(iphones[0]["udid"] if iphones else "")')
+          DEST=$(xcrun simctl list devices available | grep -E '^ +iPhone' | head -1 | sed -E 's/.*\(([0-9A-Fa-f-]{36})\).*/\1/')
           echo "Selected simulator: ${DEST:-<none>}"
 
           if [ -n "$DEST" ]; then
@@ -118,4 +114,3 @@ print(iphones[0]["udid"] if iphones else "")')
       - name: Check asset integrity
         run: |
           python ci/check_assets.py
-# Trigger CI check

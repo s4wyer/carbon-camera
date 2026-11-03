@@ -131,9 +131,9 @@ Capability honesty: record device and OS, active camera and format, requested co
 | M1b | Primary output pipeline chosen; unified preset model; our preset set authored | One pipeline chosen with measured comparison weighted to portraits; presets reproducible; **preset legibility test passes** |
 | M2 | Reversible Lab, Picks, review, lessons, archival packaging, contact sheets | User can recover, curate, and export personal photos reliably; presets survive archival round-trip |
 | M2b | Library/asset model, edit versioning, selection/batch, import, export metadata | Device-verified |
-| M3 | System entry, optional Spaces, verified cloud destinations, recipes, widgets | Private connected flows work without weakening local ownership |
-| M4 | Creative capture, motion and audio, remotes, Reels, zines, postcards | Complete selection-based creative workflows with explicit compatibility choices; advanced features do not degrade the OOTB people result |
-| M5 | Burst stacking, low-light blending, depth optics, geometry, cooperative light | Supported improvements measured; unverified targets distinguished from fallbacks |
+| M3 | System entry, cloud destinations, recipes, widgets | Private workflows with system integration; no collaboration required |
+| M4 | Creative capture, motion and audio, accidents, voice backings | Complete selection-based creative workflows with explicit compatibility choices; advanced features do not degrade the OOTB people result |
+| M5 | Burst stacking, low-light blending, depth optics, geometry | Supported improvements measured; unverified targets distinguished from fallbacks |
 | M6 | Reliability, design fidelity, accessibility, distribution candidate | Evidence and reproducible build accompany an honest coverage report; **OOTB people-photo test still passes with defaults untouched** |
 
 ---
@@ -286,7 +286,7 @@ Unchanged from v3 — N07, R14, N08, N09, G15 with the same acceptance checks. T
 |---|---|---|---|
 | 066e | G15 Export metadata and round-trip | A | Lapse SET §9 (metadata handling); NF REF §9 (metadata writing) |
 
-### M3 System integration and optional sharing
+### M3 System integration and cloud export
 
 | Step | Ticket | Type | Source |
 |---|---|---|---|
@@ -295,12 +295,7 @@ Unchanged from v3 — N07, R14, N08, N09, G15 with the same acceptance checks. T
 | 069 | R13 Scan to clone recipes | A | NF REF §4 (`StylePreset` serialization, LUT reference policy) |
 | 070 | L02 iCloud backup and sync | B | — |
 | 071 | L03 Google Photos destination | B | — |
-| 072 | N04 Optional Spaces view | B | — (net-new) |
-| 073 | SET07 Remote service contract | B | — (net-new) |
-| 074 | L11 Private social scope | B | — (net-new) |
-| 075 | L07 Optional shared Spaces | B | — (net-new) |
-| 076 | G07 CC Home Screen widget | B | — |
-| 077 | G12 Print back information | A | NF REF §5 + Halide REF §1 |
+| 076 | G12 Print back information | A | NF REF §5 + Halide REF §1 |
 
 ### M4 Creative capture and keepsakes
 
@@ -312,22 +307,8 @@ Unchanged from v3 — N07, R14, N08, N09, G15 with the same acceptance checks. T
 | 081 | C14 Super 8 motion capture | A | NF REF §2 (Live Photo assembly, 3.6s wait budget, AAC audio settings, paired asset resource types 1 + 9) |
 | 082 | G14 Moving print playback | A | NF REF §2 |
 | 083 | G10 Voice Backings | B | — |
-| 084 | C12 Local double exposure | B | — |
-| 085 | C13 Remote double exposure | B | — |
 | 086 | C15 Shake accidents | B | — |
 | 087 | C16 Reversible edge light leak | B | — |
-| 088 | C19 Fake-Out candid | B | — |
-| 089 | C20 Posing micro-prompts | B | — |
-| 090 | C21 Eye-Catch cue | B | — |
-| 091 | C22 Matchbox Softbox | B | — |
-| 092 | SET09 Nearby pairing | B | — |
-| 093 | C25 Friend phone remote | B | — |
-| 094 | C24 Apple Watch remote | B | — |
-| 095 | G03 Reel montage | B | — |
-| 096 | G08 Monthly Carbon Zine | B | — |
-| 097 | SET10 Print provider | B | — |
-| 098 | G09 Postcard packs and ordering | B | — |
-| 099 | N06B Selection-based keepsakes | B | — |
 
 **M4 exit gate.** Creative capture works with explicit compatibility choices. Live Photo and Portrait paths validated against NF REF §2. Out-of-the-box people-photo result from Part 1 is unchanged with defaults untouched.
 
@@ -339,7 +320,6 @@ Unchanged from v3 — N07, R14, N08, N09, G15 with the same acceptance checks. T
 | 101 | C03B Low-light blending | A | NF REF §1 (`CIRAWFilter` config, gain map); Halide REF §1 |
 | 102 | C11 Vintage Glass bokeh | A | NF REF §2 (Depth Anything V2 Small F16 model, 518×392 grayscale output, `hdis` packaging, 1.2998 multiplier, resized to max edge 768) |
 | 103 | C17 Group face geometry | B | — |
-| 104 | C23 Co-Op Flash | B | — |
 
 ### M6 Release qualification
 

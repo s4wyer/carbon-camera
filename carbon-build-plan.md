@@ -2,7 +2,7 @@
 
 November 2 2026
 
-Build Carbon as an iPhone camera for amateurs who want memorable photographs without learning camera jargon. The product combines a restrained RAW engine, reversible film rendering, tactile camera controls, private shared rolls, and physical-feeling keepsakes. The camera should be ready quickly; personality belongs in loading, developing, and revisiting a roll.
+Build Carbon as an iPhone camera for amateurs who want memorable photographs without learning camera jargon. The product combines a restrained RAW engine, reversible film rendering, tactile camera controls, and physical-feeling keepsakes. The camera should be ready quickly; personality belongs in loading, developing, and revisiting a roll.
 
 The full program includes every Carbon feature proposed in the conversation. Delivery phases sequence the work rather than remove features. Device-dependent concepts receive a validation task, a supported implementation, and a visible fallback. Carbon is the chosen name. The final design discussion supplies the visual direction.
 
@@ -18,9 +18,9 @@ The default experience is Natural Lens, a 24-shot roll, 35mm-equivalent framing 
 
 Approved November 3, 2026: [D-025](docs/decisions/D-025-amateur-camera-defaults.md) records the defaults for guides, editing, capture events, rendering, format, and advanced features. **Safety capture is an opt-in setting, off by default:** request three nearby frames where supported, keep one logical shot, and let the user choose manually. No eye detection or automatic frame ranking is required. This is separate from C02's paired RAW/processed recovery image.
 
-Use three destinations: Camera, Rolls, and Lab. Camera is the launch destination after onboarding. Rolls holds personal and CC'd envelopes. Lab holds saved Carbon Copies and learning prompts. Settings is available from the film flap and Rolls. Keep a dedicated stranger feed outside the product scope, as the conversation requests.
+Use three destinations: Camera, Rolls, and Lab. Camera is the launch destination after onboarding. Rolls holds personal envelopes. Lab holds saved Carbon Copies and learning prompts. Settings is available from the film flap and Rolls.
 
-The complete scope is delivered in six phases. P0 validates the difficult capture combinations. P1 supplies an attractive and dependable camera. P2 completes the personal darkroom and curation. P3 adds private collaboration and system entry. P4 adds creative capture, motion, remotes, and keepsakes. P5 completes the advanced imaging and co-op light program. A P3 launch is a release checkpoint; P4 and P5 remain committed scope for the full product.
+The complete scope is delivered in six phases. P0 validates the difficult capture combinations. P1 supplies an attractive and dependable camera. P2 completes the personal darkroom and curation. P3 adds system entry and cloud destinations. P4 adds creative capture, motion, and voice backings. P5 completes the advanced imaging program. A P3 launch is a release checkpoint; P4 and P5 remain committed scope for the full product.
 
 Success means a novice can open Carbon, choose framing by feel, make a good picture, recover a poor exposure, and find or share the result later. The no-retakes mood is a shooting ritual; retained originals and reversible edits protect important memories.
 
@@ -67,7 +67,7 @@ Opening a finished envelope offers the contact sheet and an optional quick revie
 
 ### Lab and CC flows
 
-Lab presents visual recipe cards, reversible controls, and the optional ten-day lesson track. A CC'd roll starts with name, capacity, reveal choice, and an invitation preview. Members see the shared count and upload status, with no public feed. Remote camera and Co-Op Light use a dedicated pairing sheet with a clear active connection indicator and End session action. Widget previews ask which shared rolls may appear on the Home Screen before enabling delivery.
+Lab presents visual recipe cards, reversible controls, and the optional ten-day lesson track. Widget previews ask which rolls may appear on the Home Screen before enabling delivery.
 
 ## 4 Capture policy and film engine
 
@@ -98,32 +98,26 @@ Build native iOS first, with an iOS 18 or later baseline as a planning assumptio
 | --- | --- | --- |
 | CameraCore | Session, capabilities, hardware events, exposure and focus | Capture request and result manifest |
 | FilmEngine | Versioned render graph and previews; preset definitions sourced from the three reference documents | Source hash, preset ID and version, recipe and engine revision |
-| RollStore | Frames, membership, reveal state, ratings, edit history | Transactional local database |
+| RollStore | Frames, reveal state, ratings, edit history | Transactional local database |
 | MediaStore | DNG, HEIF, thumbnails, clips, ambient audio | Atomic files with checksums |
 | DevelopQueue | Jobs, backpressure, checkpoints, retries | Idempotent job records |
-| SyncService | Optional backup, event roll transfer, conflict resolution | Outbox, acknowledgments, access rules |
-| ArtifactComposer | Contact sheets, reels, zines, postcards | Export manifest and source revisions |
+| SyncService | Optional iCloud and Google backup, conflict resolution | Outbox, acknowledgments |
+| ArtifactComposer | Contact sheets, print detail | Export manifest and source revisions |
 | SystemExtensions | Lock Screen, widgets, Camera Control, Watch | Minimal permitted context and capture handoff |
 
-Core entities are Roll, Shot, SourceResource, RecipeVersion, RenderRevision, DevelopmentJob, Member, Contribution, RevealEvent, Favorite, AudioBacking, and ExportArtifact. A Shot owns source-resource references rather than one assumed file. A Contribution has an idempotency key and reserved slot. A RevealEvent records a server-authoritative version for shared rolls. Recipes are immutable and reusable; edits point to a recipe revision. Attach audio, motion, depth, and alternate frames to the same Shot.
+Core entities are Roll, Shot, SourceResource, RecipeVersion, RenderRevision, DevelopmentJob, Favorite, AudioBacking, and ExportArtifact. A Shot owns source-resource references rather than one assumed file. Recipes are immutable and reusable; edits point to a recipe revision. Attach audio, motion, depth, and alternate frames to the same Shot.
 
-The local roll state machine is loaded, shooting, full or manually closed, developing, ready, revealed, and archived. A failed or paused job preserves its last safe stage and original. Shared rolls also track joining, pending contribution, reserved slot, accepted upload, and synced reveal. Export status is separate from render status. The same shot can be developed and still awaiting Photos permission.
+The local roll state machine is loaded, shooting, full or manually closed, developing, ready, revealed, and archived. A failed or paused job preserves its last safe stage and original. Export status is separate from render status. The same shot can be developed and still awaiting Photos permission.
 
 Retain originals by default with a clear storage budget. Provide a user-controlled rendered-only archive option after warning that RAW recovery will be lost. Never silently remove originals to satisfy a small-file claim. A full-resolution RAW source remains materially larger than a rendered HEIF. Export HEIF or JPEG for ordinary sharing, DNG plus JSON sidecar for archival recovery, and an optional complete roll archive. Prototype an embedded HEIF and RAW container, but verify round trips through Photos, Files, AirDrop, messaging, and cloud services before making that the sole archive format.
 
-## 6 Shared rolls privacy and system behavior
+## 6 Privacy and system behavior
 
-Personal shooting does not need a Carbon account. Introduce optional identity when a user enables durable cross-device sync or remote event membership. Use expiring invite links or QR codes with explicit membership, contribution, and viewing rights. Keep roles simple: owner, contributor, and viewer. Invite links must not make a private archive public by accident. Joining, receiving widgets, ambient audio recording, and remote preview are separate choices.
+Personal shooting does not need a Carbon account. Introduce optional identity only when a user enables durable cross-device iCloud sync or cloud export. Joining widgets and ambient audio recording are separate, explicit choices.
 
-For online shared rolls, a small service owns membership, slot reservations, contribution acknowledgments, and the reveal event. Media uploads use access-controlled object storage. Reserve a frame before capture when online, expire abandoned reservations, and deduplicate retries by shot ID. For offline use, allocate per-device slot budgets or clearly mark overflow contributions awaiting reconciliation. Never claim an exact shared count while disconnected without a reservation policy. Peer-only rolls use an elected host or an explicit merge step with the same contribution manifest.
+The locked-camera extension must use its sanctioned capture handoff and expose only the capture experience. Apple documents shared-container restrictions for a locked session; old photos and editing open in the authenticated app. Widget refresh is scheduled by the system; promise eventual eligible updates, not immediate delivery to every Home Screen.
 
-Shared reveal means one committed reveal version and scheduled moment where possible. It cannot guarantee simultaneous display on an offline phone. Connected members open the same completed content; disconnected members synchronize later. Keep optional 24-hour ritual settings separate from image-processing progress. No background job or notification can be promised at an exact time merely because a roll has a timer.
-
-Use a transport abstraction for nearby remotes, file exchange, and co-op lighting. The transcript names MultipeerConnectivity; evaluate Network framework and the current SDK migration guidance in P0 before choosing the implementation. Maintain reconnect, clock-offset estimation, permission, and disconnect behavior. Network delivery alone does not establish flash synchronization accuracy. Continuous illumination is the first reliable Co-Op Light implementation; synchronized pulses require measured shutter-window overlap.
-
-The locked-camera extension must use its sanctioned capture handoff and expose only the capture experience. Apple documents network and shared-container restrictions for a locked session. Old private photos, friend membership, network invitations, and editing open in the authenticated app. Widget refresh is scheduled by the system; promise eventual eligible updates, not immediate delivery to every Home Screen.
-
-Ask for camera access on first capture entry, Photos add access on export, microphone access when Voice Backings are enabled, local network access when pairing nearby devices, and notifications when a user requests ready-roll alerts. Contacts are unnecessary. Add an audio-recording indicator, per-shot removal, a metadata privacy export option, and the ability to revoke shared access. Revocation stops future service access; downloaded copies remain with recipients. Make this understandable in the sharing flow.
+Ask for camera access on first capture entry, Photos add access on export, microphone access when Voice Backings are enabled, and notifications when a user requests ready-roll alerts. Contacts and local network access are unnecessary. Add an audio-recording indicator and per-shot removal.
 
 ## 7 Build sequence and work packages
 
@@ -131,16 +125,16 @@ The estimate below assumes two iOS engineers, one imaging engineer, one backend 
 
 | Phase | Planning window | Work package | Exit evidence |
 | --- | --- | --- | --- |
-| P0 | Weeks 1-3 | Device capability matrix, capture harness, color test set, RAW packaging, flash and peer timing experiments, design states | Measured feasible combinations; fallback contract; approved static screen system |
+| P0 | Weeks 1-3 | Device capability matrix, capture harness, color test set, RAW packaging, flash timing experiments, design states | Measured feasible combinations; fallback contract; approved static screen system |
 | P1 | Weeks 4-10 | Guest onboarding, responsive camera, Natural engine, tactile controls, local roll store, recoverable queue | Attractive private alpha that captures and recovers a full roll offline |
 | P2 | Weeks 11-16 | Reversible Lab, skin color, darkroom, envelopes, Light Table, contact sheets, print detail, lessons | Complete single-user beta with verified archive and export round trips |
-| P3 | Weeks 17-23 | CC'd rolls, iCloud and Google export, invites, shared reveal, widgets, recipe scan, locked entry and Camera Control | Collaboration release with tested offline reconciliation and private access |
-| P4 | Weeks 24-31 | Double exposure, accidents, moving prints, voice, posing, remotes, zines, reels and postcards | Creative release with coherent mode choices and exportable keepsakes |
-| P5 | Weeks 32-44 | 16-32-frame research, advanced bokeh, face geometry, co-op strobe validation | Full-scope release with measured image improvements and documented fallbacks |
+| P3 | Weeks 17-23 | iCloud and Google export, recipe scan, locked entry and Camera Control | System integration with tested round trips and private access |
+| P4 | Weeks 24-31 | Double exposure, accidents, moving prints, voice backings | Creative release with coherent mode choices and exportable results |
+| P5 | Weeks 32-44 | 16-32-frame research, advanced bokeh, face geometry | Full-scope release with measured image improvements and documented fallbacks |
 
-Sequence dependencies deliberately. P2 requires P1's immutable originals and recipe model. P3 requires stable roll IDs, contribution manifests, and account-free local mode. Motion capture must exist before Roll Reels. Favorites and contact-sheet selection must exist before monthly zines. The depth pipeline precedes Vintage Glass. A paired lighting session precedes synchronized strobe experiments. Prototype the P5 algorithms during P0 without blocking P1 camera delivery.
+Sequence dependencies deliberately. P2 requires P1's immutable originals and recipe model. Motion capture must exist before moving print playback. Favorites and contact-sheet selection must exist before print detail. The depth pipeline precedes Vintage Glass. Prototype the P5 algorithms during P0 without blocking P1 camera delivery.
 
-For each feature, implementation tickets should include the ledger ID, screen states, API capability check, persistence change, accessibility equivalent, failure behavior, and the completion rule. Backend work and local UI work can proceed in parallel after the shared contribution contract is stable. Keep a sample roll fixture containing RAW, fallback HEIF, depth, audio, motion, a rejected frame, and an interrupted job so every team member tests the same lifecycle.
+For each feature, implementation tickets should include the ledger ID, screen states, API capability check, persistence change, accessibility equivalent, failure behavior, and the completion rule. Backend work and local UI work can proceed in parallel once the local archive contract is stable. Keep a sample roll fixture containing RAW, fallback HEIF, depth, audio, motion, a rejected frame, and an interrupted job so every team member tests the same lifecycle.
 
 ## 8 Validation and release criteria
 
@@ -155,17 +149,16 @@ Treat the figures below as proposed engineering targets to establish and revise 
 | Background | Every interrupted render resumes or restarts safely; no false ready state |
 | Image quality | Blind comparisons against neutral capture and the previous engine across representative people and lighting |
 | Skin and geometry | Review the full Monk range and edge-position group portraits; reject hue or identity distortion regressions |
-| Shared rolls | Concurrent last-slot reservations, duplicate uploads, offline overflow, revoked member, and delayed reveal tests pass |
 | Export | HEIF, JPEG, DNG plus recipe, motion, and print outputs round-trip as specified; metadata stripping has a useful fallback |
 | Accessibility | Complete first shot, winding, reveal, focus, flip, play, and cull with VoiceOver and reduced motion |
 | Presets | Legibility test: a user unfamiliar with the app can predict what each preset does from its name; portrait/skin preset is first and default |
 | Out-of-the-box | First-time user, no instruction, photographs a person: result must be good with defaults untouched |
 
-Build a physical device matrix spanning the oldest supported OS and device, a recent base model, a recent Pro model, Camera Control hardware, and cameras lacking RAW or depth. Record actual capabilities per active camera and mode. Test low storage, camera interruptions, denied permissions, locked capture handoff, offline use, thermal pressure, and a full 36-shot collaborative roll. Include fast-moving people, neon, daylight, tungsten, mixed light, low light, glasses, hair, and group faces at frame edges in image review.
+Build a physical device matrix spanning the oldest supported OS and device, a recent base model, a recent Pro model, Camera Control hardware, and cameras lacking RAW or depth. Record actual capabilities per active camera and mode. Test low storage, camera interruptions, denied permissions, locked capture handoff, offline use, thermal pressure, and a full 36-shot roll. Include fast-moving people, neon, daylight, tungsten, mixed light, low light, glasses, hair, and group faces at frame edges in image review.
 
 Run formative design sessions with amateur photographers before finishing P1 and P2. Ask participants to take a first shot, change Mood, switch primes, find flash, load or wind a roll, recover a frame, reveal an envelope, and locate a favorite. Track task completion and mistaken gestures. Keep artistic judgment and technical sharpness as separate ratings so a clinical image does not automatically win.
 
-P5 features graduate from experiments only when they improve the intended situation on the tested hardware. Stacking must quantify noise reduction, detail, ghosting, latency, memory, and battery. Bokeh must pass depth-edge review. Co-op pulses must demonstrate reliable exposure overlap. If an advanced method fails, release its documented fallback and retain the unmet target in the roadmap with evidence rather than claiming it is complete.
+P5 features graduate from experiments only when they improve the intended situation on the tested hardware. Stacking must quantify noise reduction, detail, ghosting, latency, memory, and battery. Bokeh must pass depth-edge review. If an advanced method fails, release its documented fallback and retain the unmet target in the roadmap with evidence rather than claiming it is complete.
 
 ## 9 Decisions that reconcile the transcript
 
@@ -199,7 +192,7 @@ The implementation should check these primary references again when development 
 7. Apple About Apple ProRAW documents its computational basis and incompatibility with Live Photos in the described workflow. https://support.apple.com/en-us/119916
 8. Apple Capturing still and Live Photos describes configuration-dependent capture options. https://developer.apple.com/documentation/avfoundation/capturing-still-and-live-photos
 9. Google Photos API updates restrict general library access and sharing APIs, while preserving permitted app-created-content workflows. https://developers.google.com/photos/support/updates
-10. Apple Multipeer Connectivity documentation supplies the transcript's nearby transport reference; evaluate the current Network framework migration guidance before adopting it. https://developer.apple.com/documentation/multipeerconnectivity
+10. Apple Multipeer Connectivity documentation was previously cited for nearby transport; Carbon no longer includes multi-device features, so this reference is retained only as historical context.
 11. Pool's official App Store listing confirms immediate guest use and its physical artifact references. The Carbon screen system is an original interpretation of the requested inspiration. https://apps.apple.com/us/app/pool-the-screenshot-app/id6752956163
 
 ## 11 Complete feature ledger
@@ -211,7 +204,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | ID | Feature | Phase | Source lines | Build and completion rule |
 | --- | --- | --- | --- | --- |
 | B01 | Carbon identity | P1 | 141-153 | Use Carbon as the product name; connect carbon copying, remjet halation, and archival material in the brand story and icon exploration. |
-| B02 | Carbon vocabulary | P1 | 149-153 | Use CC'd Rolls for shared albums, Carbon Copies for saved recipes, and Carbon Credits for provenance; retain the proposed shameless-copy tagline as optional brand copy. |
+| B02 | Carbon vocabulary | P1 | 149-153 | Use Carbon Copies for saved recipes and Carbon Credits for provenance; retain the proposed shameless-copy tagline as optional brand copy. |
 | B03 | The Heist and inspiration credits | P1 | 131-133, 274 | Include Stolen Goods or The Heist as a playful settings subtitle and an itemized inspiration receipt. Keep plain Settings and permission labels discoverable. |
 | B04 | Preset naming | P2 | 132 | Retain the recovered preset parameter sets from the three reference documents. Name and surface them per roadmap §2: plain description, one obvious promise, ordered by usefulness to a beginner, portrait/skin first and default. Playful naming may appear as a subtitle or in metadata, never as the primary label. |
 **Note on B04 and all preset tickets.** The recovered preset parameter sets (Halide LUT payloads and `LookCustomization` fields; Lapse Metal and Core Image pipeline recipes; No Fusion `.preset` binary plist fields and LUT references) are the source material. Our shipped presets derive from them, may rename and regroup them, and may modify them for the amateur/people goal with documented deltas. We should avoid this unless we have good reason though. 
@@ -247,20 +240,12 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | C09 | Black and white Snap Focus | P4 | 191 | Add high-contrast street mode with focus calibrated toward 2m or 6.5ft on supported lenses; verify real distance behavior and fall back to a preset focus range. |
 | C10 | Prime focal lengths | P1 | 81, 289 | Use notched 24, 35, and 50mm-equivalent choices; select real cameras or validated crops per device. Display equivalent framing without implying every choice is an optical lens. |
 | C11 | Vintage Glass bokeh | P5 | 172 | Use available depth or portrait mattes for swirly, soap-bubble, cat's-eye bokeh, f/1.4-like falloff, and soft edges. Preserve hair and glasses; provide a depth-unavailable fallback. |
-| C12 | Local double exposure | P4 | 173 | Hold the first exposure non-destructively, overlay a faint ghost silhouette, and let the same user or a friend finish the second exposure on the phone. |
-| C13 | Remote double exposure | P4 | 173 | Send a half-exposed frame through a consented share or invite flow so a remote friend can add layer two; maintain separate originals, recipe, and ownership. |
+| C12 | Local double exposure | P4 | 173 | Hold the first exposure non-destructively, overlay a faint ghost silhouette, and let the same user finish the second exposure on the phone. |
 | C14 | Super 8 motion capture | P4 | 174 | Offer a 1.5-second motion companion targeting an 18fps aesthetic per shot; use a supported Live Photo or custom video companion and retain capture timestamps and audio preference. |
 | C15 | Shake accidents | P4 | 190 | Use accelerometer input during supported exposure windows to create reversible light-leak streaks or shutter-drag effects; make shake sensitivity explicit and prevent accidental activation. |
 | C16 | First frame burn | P4 | 189 | Apply an optional vertical orange-red leak to frame one of each 24-shot roll; one tap restores the untouched crop and original. |
 | C17 | Group face geometry | P5 | 228 | Apply subtle local de-stretching to faces near 24mm frame edges while protecting surrounding lines, neighboring people, and identity; keep the transform reversible. |
 | C18 | Skin-protected color | P2 | 219 | Use face or skin segmentation to preserve natural luminance and warmth under strong grades. Calibrate across the Monk Skin Tone Scale and mixed lighting without inferring identity. |
-| C19 | Fake-Out candid | P4 | 234 | For explicitly enabled timer or flash sequences, capture an additional candid about 0.5s after the cue; group it with the intended shot and allow selection of either frame. |
-| C20 | Posing micro-prompts | P4 | 235 | Provide short subject-direction prompts on screen, through supported torch cues, or privately through AirPods or audio output. Let the photographer select or mute each channel. |
-| C21 | Eye-Catch cue | P4 | 236 | Offer a gentle rear-LED heartbeat before supported captures to guide gaze toward the lens; avoid rapid flicker and allow immediate disable. |
-| C22 | Matchbox Softbox | P4 | 227 | Provide candlelight amber, cyber-pink, and warm tungsten full-screen light with brightness control for close subjects; explain which display must face the subject. |
-| C23 | Co-Op Flash | P5 | 217, 226 | Pair a friend's phone as a roughly 45-degree warm fill light or screen softbox. Validate synchronized pulse timing; ship continuous timed illumination when a reliable strobe is unavailable. |
-| C24 | Apple Watch remote | P4 | 183 | Provide wrist viewfinder, shutter, and timer controls for rear-camera group shots; show disconnection and latency states and preserve the primary phone as the capturing device. |
-| C25 | Friend phone remote | P4 | 183 | Offer an invited nearby phone a low-latency rear-camera preview and shutter or countdown control; pairing and revocation are explicit and preview sharing ends on disconnect. |
 
 ### Viewfinder and tactile controls
 
@@ -300,7 +285,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | R12 | Carbon Copy recipe authoring | P2 | 171 | Allow grain, halation, warmth, and full stock settings to be saved, named, and shared as versioned recipes; importing a recipe never changes an existing original. |
 | R13 | Scan to clone recipes | P3 | 171, 283 | Read a recipe identifier, metadata, or QR from a Carbon photo and apply the exact available recipe. For stripped or photographed images, offer QR recovery or a labeled approximation. |
 
-### Rolls storage and collaboration
+### Rolls storage
 
 | ID | Feature | Phase | Source lines | Build and completion rule |
 | --- | --- | --- | --- | --- |
@@ -310,11 +295,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | L04 | Roll capacity | P1 | 42, 49, 275 | Support 24- and 36-frame rolls, deterministic frame numbers, a default first roll of 24, and consistent remaining-shot counts after failed or retried captures. |
 | L05 | Compute-based darkroom | P1 | 36-42 | Reflect genuine queued, rendering, paused, ready, and failed states; reveal ready work without an invented mandatory wait and expose a retry when development fails. |
 | L06 | Optional delayed reveal | P2 | 131, 274 | Retain the transcript's 24-hour darkroom idea as an explicitly selected reveal ritual separate from compute time; display the actual reveal time and allow the owner to end it. |
-| L07 | CC'd Event Rolls | P3 | 49 | Create wedding, party, or road-trip rolls using peer transfer or an invite link; participants contribute to a shared 36-shot or configured roll capacity with atomic slot accounting. |
-| L08 | Shared reveal | P3 | 49 | Commit a single reveal event when the shared roll finishes and rendering is ready; all connected participants receive the same reveal version, while offline devices reveal after synchronization. |
 | L09 | Safelight processing shells | P2 | 281 | Wrap developing rolls in translucent red-orange glass; derive inverted silhouettes and growing contrast from real processing stages, with a plain textual progress alternative. |
-| L10 | Shared lab envelopes | P3 | 282 | Present CC'd Rolls as manila envelopes with scribbled titles, contributor routing stamps, and a swipe-to-tear opening; a standard Open roll action performs the same operation. |
-| L11 | Private social scope | P3 | 46-49 | Keep collaboration limited to invited rolls, avoid a stranger feed and forced invitations, and let members leave, revoke future access, and export their available memories. |
 
 ### Reveal curation and keepsakes
 
@@ -322,13 +303,9 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | --- | --- | --- | --- | --- |
 | G01 | Lab Envelope reveal | P2 | 193-195 | Present finished rolls as a lab delivery with a tactile open action and clear ready state; opening leads directly into the contact sheet or optional culling flow. |
 | G02 | Printable contact sheet | P2 | 197 | Generate a 24-frame proof grid with four columns and six rows on black negative strips, circling highest-rated shots in grease pencil. Export share and print versions; paginate 36-shot rolls or offer a six-by-six grid. |
-| G03 | Roll Reel montage | P4 | 198 | Auto-cut a roughly ten-second 16mm-style montage from motion companions, with leader countdown, consistent grade, and optional projector audio; show a useful fallback when clips are absent. |
 | G04 | Carbon Credits metadata | P2 | 199, 283 | Write supported EXIF or XMP provenance and render it on the print back. Treat the example 40/30/30 inspiration breakdown as playful copy, never a measured or affiliation claim. |
 | G05 | Light Table swipe cull | P2 | 242 | Offer an approximately 30-second review that groups near duplicates, recommends sharp eyes-open smiles, and lets users flick rejects to a recoverable bin before Photos export. |
-| G06 | Stars and ratings | P2 | 197, 243 | Allow manual stars or ratings, preserve user choices over automatic ranking, and reuse favorites for contact-sheet circles, widgets, zines, and postcards. |
-| G07 | CC'd Home Screen widget | P3 | 220 | After a shared roll develops, update opted-in tagged participants' widgets with eligible top shots subject to OS refresh timing; provide privacy and per-roll controls. |
-| G08 | Monthly Carbon Zine | P4 | 243 | Generate a monthly editable layout from up to the 24 best starred photos, with manual selection and a print-ready export when the month contains fewer favorites. |
-| G09 | Postcard packs and ordering | P4 | 243 | Create four-by-six postcard packs and a two-step print handoff to a supported local lab or vendor; show live cost and shipping and offer at-cost ordering only with verified vendor terms. |
+| G06 | Stars and ratings | P2 | 197, 243 | Allow manual stars or ratings, preserve user choices over automatic ranking, and reuse favorites for contact-sheet circles and widgets. |
 | G10 | Voice Backings | P4 | 244 | Opt in to approximately three seconds of ambient sound during a shot; retain an audio companion and play it from the print back with clear recording status and deletion control. |
 | G11 | Tangible print detail | P2 | 283 | Render a two-sided photo with spring-based pinch zoom and horizontal flip; preserve crop and zoom state and provide explicit Front and Back buttons. |
 | G12 | Print back information | P3 | 283 | Show stamped date, lens, stock recipe QR, Carbon Credits, and available room-audio playback on the reverse; never rely on EXIF surviving an external share. |
