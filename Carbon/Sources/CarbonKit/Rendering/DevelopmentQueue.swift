@@ -4,13 +4,6 @@
 import Foundation
 import os.log
 
-/// Job record for tracking render work
-struct DevelopmentJob: Identifiable {
-    let id = UUID()
-    let shotID: UUID
-    let recipeVersionID: UUID
-}
-
 @MainActor
 final class DevelopmentQueue: ObservableObject {
     static let shared = DevelopmentQueue()
