@@ -95,14 +95,14 @@ final class PhotoRenderer: ObservableObject {
     private func loadSourceImage(shot: Shot) async throws -> CIImage? {
         // Priority 1: Check primary SourceResource URL
         for source in shot.sources {
-            if FileManager.default.fileExists(atPath: source.sourceURL.path) {
+            if FileManager.default.fileExists(atPath: source.mediaURL.path) {
                 if source.type == .rawBayer {
                     // CIRAWFilter decodes Apple DNG / Bayer RAW
-                    if let rawFilter = CIRAWFilter(imageURL: source.sourceURL) {
+                    if let rawFilter = CIRAWFilter(imageURL: source.mediaURL) {
                         return rawFilter.outputImage
                     }
                 }
-                return CIImage(contentsOf: source.sourceURL)
+                return CIImage(contentsOf: source.mediaURL)
             }
         }
         

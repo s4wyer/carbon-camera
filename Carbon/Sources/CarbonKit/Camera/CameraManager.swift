@@ -371,7 +371,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                     recipeID: "natural-v1",
                     presetDefinitionID: defaultPreset.id,
                     engineVersion: "1.0",
-                    source: rawData != nil ? .rawBayer : .hevcProcessed,
+                    source: rawData != nil ? .rawBayer : .processedHEVC,
                     parameters: RecipeVersion.Parameters(
                         filmPreset: defaultPreset.displayName,
                         filmStrength: 0.85,
@@ -396,23 +396,31 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                 if let rawName = entry.rawFilename, let rawHash = entry.rawSHA256 {
                     sources.append(SourceResource(
                         id: UUID(),
-                        shotID: entry.id,
+                        captureID: entry.captureID,
                         type: .rawBayer,
-                        sourceURL: await CaptureJournal.shared.fileURL(for: rawName),
-                        sourceHash: rawHash,
-                        byteCount: Int64(rawData?.count ?? 0),
-                        dimensions: CGSize(width: 4032, height: 3024)
+                        mediaURL: await CaptureJournal.shared.fileURL(for: rawName),
+                        mediaHash: rawHash,
+                        provenance: SourceResource.Provenance(
+                            engine: "carbon-camera",
+                            version: "1.0.0",
+                            timestamp: entry.timestamp,
+                            isUserEditable: false
+                        )
                     ))
                 }
                 if let hevcName = entry.hevcFilename, let hevcHash = entry.hevcSHA256 {
                     sources.append(SourceResource(
                         id: UUID(),
-                        shotID: entry.id,
-                        type: .hevcProcessed,
-                        sourceURL: await CaptureJournal.shared.fileURL(for: hevcName),
-                        sourceHash: hevcHash,
-                        byteCount: Int64(hevcData?.count ?? 0),
-                        dimensions: CGSize(width: 4032, height: 3024)
+                        captureID: entry.captureID,
+                        type: .processedHEVC,
+                        mediaURL: await CaptureJournal.shared.fileURL(for: hevcName),
+                        mediaHash: hevcHash,
+                        provenance: SourceResource.Provenance(
+                            engine: "carbon-camera",
+                            version: "1.0.0",
+                            timestamp: entry.timestamp,
+                            isUserEditable: true
+                        )
                     ))
                 }
                 

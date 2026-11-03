@@ -203,7 +203,7 @@ private struct PhotoCard: View {
         ZStack(alignment: .topTrailing) {
             // Photo thumbnail
             GeometryReader { geo in
-                if let url = shot.sources.first?.sourceURL,
+                if let url = shot.sources.first?.mediaURL,
                    let uiImage = UIImage(contentsOfFile: url.path) {
                     Image(uiImage: uiImage)
                         .resizable()
@@ -271,12 +271,16 @@ final class LibraryStore: ObservableObject {
                 if let hevc = entry.hevcFilename, let hHash = entry.hevcSHA256 {
                     sources.append(SourceResource(
                         id: UUID(),
-                        shotID: entry.id,
-                        type: .hevcProcessed,
-                        sourceURL: await CaptureJournal.shared.fileURL(for: hevc),
-                        sourceHash: hHash,
-                        byteCount: 0,
-                        dimensions: CGSize(width: 4032, height: 3024)
+                        captureID: entry.captureID,
+                        type: .processedHEVC,
+                        mediaURL: await CaptureJournal.shared.fileURL(for: hevc),
+                        mediaHash: hHash,
+                        provenance: SourceResource.Provenance(
+                            engine: "carbon-camera",
+                            version: "1.0.0",
+                            timestamp: entry.timestamp,
+                            isUserEditable: true
+                        )
                     ))
                 }
                 
@@ -289,7 +293,7 @@ final class LibraryStore: ObservableObject {
                         recipeID: "natural-v1",
                         presetDefinitionID: entry.recipeVersionID,
                         engineVersion: "1.0",
-                        source: .hevcProcessed,
+                        source: .processedHEVC,
                         parameters: RecipeVersion.Parameters(
                             filmPreset: "Natural",
                             filmStrength: 0.85,
