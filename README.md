@@ -10,7 +10,7 @@ Carbon is an iPhone camera for amateurs who want memorable photographs of people
 
 **New work (Nov 3, 2024):**
 - **SET13b**: Reference presets menu ("Stolen Goods") with cheeky attribution — surfaces all Halide/Lapse/No Fusion presets transparently (decision D-024, PresetLibrary.swift scaffold)
-- **GitHub Actions CI**: `.github/workflows/build.yml` — auto-builds unsigned IPA on push to main/develop, runs Swift tests, runs Python pipeline verification
+- **GitHub Actions CI**: `.github/workflows/build.yml` — uses Xcode 26.3 on `macos-15`, tests on an eligible iOS 26 iPhone simulator, builds an unsigned IPA on push to main/develop, and runs Python pipeline verification. The deployment target remains iOS 18.0; CI currently exercises iOS 26, not iOS 18.
 - **App target**: CarbonApp.swift (welcome + camera placeholder), XcodeGen project spec (project.yml), Info.plist, color tokens (Remjet, Receipt, CarbonInk, etc.)
 
 **Status detail:** `docs/SET01-execution-report.md`, `docs/roadmap-progress.md`
