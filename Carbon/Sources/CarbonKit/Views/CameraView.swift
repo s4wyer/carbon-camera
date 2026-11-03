@@ -106,18 +106,41 @@ struct CameraView: View {
                     
                     // Shutter deck row
                     HStack(alignment: .center) {
-                        // Left: Last photo thumbnail shortcut to Library (L01, N05)
+                        // Left: Roll shortcut (last captured thumbnail → Rolls view)
                         Button(action: {
-                            coordinator.navigateTo(.library)
+                            coordinator.navigateTo(.rolls)
                         }) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.white.opacity(0.12))
-                                    .frame(width: 48, height: 48)
+                            ZStack(alignment: .bottomTrailing) {
+                                if let lastShot = cameraManager.lastCapturedShot,
+                                   let thumb = PhotoThumbnailCache.shared.thumbnail(for: lastShot) {
+                                    Image(uiImage: thumb)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 48, height: 48)
+                                        .clipped()
+                                        .cornerRadius(4)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.white.opacity(0.12))
+                                        .frame(width: 48, height: 48)
+                                        .overlay(
+                                            Image(systemName: "film")
+                                                .font(.system(size: 16))
+                                                .foregroundColor(.white.opacity(0.5))
+                                        )
+                                }
                                 
-                                Image(systemName: "photo.on.rectangle")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(.white.opacity(0.7))
+                                // Frame count badge
+                                if let active = RollStore.shared.activeRoll, active.frameCount > 0 {
+                                    Text("\(active.frameCount)")
+                                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                        .foregroundColor(Color("Remjet"))
+                                        .padding(.horizontal, 3)
+                                        .padding(.vertical, 1)
+                                        .background(Color("Receipt"))
+                                        .cornerRadius(2)
+                                        .offset(x: 2, y: 2)
+                                }
                             }
                         }
                         .frame(width: 60)

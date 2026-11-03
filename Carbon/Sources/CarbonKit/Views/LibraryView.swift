@@ -133,8 +133,8 @@ struct LibraryView: View {
                     bottomTabButton("Camera", active: false) {
                         coordinator.navigateTo(.camera)
                     }
-                    bottomTabButton("Library", active: true) {
-                        // Already on library
+                    bottomTabButton("Rolls", active: false) {
+                        coordinator.navigateTo(.rolls)
                     }
                     bottomTabButton("Lab", active: false) {
                         coordinator.navigateTo(.lab)
@@ -278,6 +278,12 @@ final class LibraryStore: ObservableObject {
     @Published var pickIDs: Set<UUID> = []
     
     var shots: [Shot] { sections.flatMap(\.shots) }
+    
+    /// Shots belonging to a specific roll, in capture order
+    func shots(for roll: Roll) -> [Shot] {
+        let byID = Dictionary(uniqueKeysWithValues: shots.map { ($0.id, $0) })
+        return roll.shotIDs.compactMap { byID[$0] }
+    }
     
     func loadJournal() async {
         do {

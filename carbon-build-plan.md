@@ -14,7 +14,7 @@ Start as a guest, offline. Ask for camera access when entering capture, then int
 
 ## 1 Product decisions
 
-The default experience is Natural Lens, a 24-shot roll, 35mm-equivalent framing where the device supports a useful crop, automatic exposure, and a restrained Carbon stock. Flash remains easy to reach. Users can shoot as a guest, offline, before creating an account or granting access to their library, microphone, contacts, notifications, or local network.
+The default experience is Natural Lens, an open-ended roll, 35mm-equivalent framing where the device supports a useful crop, automatic exposure, and a restrained Carbon stock. Flash remains easy to reach. Users can shoot as a guest, offline, before creating an account or granting access to their library, microphone, contacts, notifications, or local network.
 
 Approved November 3, 2026: [D-025](docs/decisions/D-025-amateur-camera-defaults.md) records the defaults for guides, editing, capture events, rendering, format, and advanced features. **Safety capture is an opt-in setting, off by default:** request three nearby frames where supported, keep one logical shot, and let the user choose manually. No eye detection or automatic frame ranking is required. This is separate from C02's paired RAW/processed recovery image.
 
@@ -107,7 +107,7 @@ Build native iOS first, with an iOS 18 or later baseline as a planning assumptio
 
 Core entities are Roll, Shot, SourceResource, RecipeVersion, RenderRevision, DevelopmentJob, Favorite, AudioBacking, and ExportArtifact. A Shot owns source-resource references rather than one assumed file. Recipes are immutable and reusable; edits point to a recipe revision. Attach audio, motion, depth, and alternate frames to the same Shot.
 
-The local roll state machine is loaded, shooting, full or manually closed, developing, ready, revealed, and archived. A failed or paused job preserves its last safe stage and original. Export status is separate from render status. The same shot can be developed and still awaiting Photos permission.
+The local roll state machine is shooting, developing, ready, and archived. A roll moves to developing when the user manually closes it or starts a new one. A failed or paused job preserves its last safe stage and original. Export status is separate from render status. The same shot can be developed and still awaiting Photos permission.
 
 Retain originals by default with a clear storage budget. Provide a user-controlled rendered-only archive option after warning that RAW recovery will be lost. Never silently remove originals to satisfy a small-file claim. A full-resolution RAW source remains materially larger than a rendered HEIF. Export HEIF or JPEG for ordinary sharing, DNG plus JSON sidecar for archival recovery, and an optional complete roll archive. Prototype an embedded HEIF and RAW container, but verify round trips through Photos, Files, AirDrop, messaging, and cloud services before making that the sole archive format.
 
@@ -154,7 +154,7 @@ Treat the figures below as proposed engineering targets to establish and revise 
 | Presets | Legibility test: a user unfamiliar with the app can predict what each preset does from its name; portrait/skin preset is first and default |
 | Out-of-the-box | First-time user, no instruction, photographs a person: result must be good with defaults untouched |
 
-Build a physical device matrix spanning the oldest supported OS and device, a recent base model, a recent Pro model, Camera Control hardware, and cameras lacking RAW or depth. Record actual capabilities per active camera and mode. Test low storage, camera interruptions, denied permissions, locked capture handoff, offline use, thermal pressure, and a full 36-shot roll. Include fast-moving people, neon, daylight, tungsten, mixed light, low light, glasses, hair, and group faces at frame edges in image review.
+Build a physical device matrix spanning the oldest supported OS and device, a recent base model, a recent Pro model, Camera Control hardware, and cameras lacking RAW or depth. Record actual capabilities per active camera and mode. Test low storage, camera interruptions, denied permissions, locked capture handoff, offline use, and thermal pressure across a full roll. Include fast-moving people, neon, daylight, tungsten, mixed light, low light, glasses, hair, and group faces at frame edges in image review.
 
 Run formative design sessions with amateur photographers before finishing P1 and P2. Ask participants to take a first shot, change Mood, switch primes, find flash, load or wind a roll, recover a frame, reveal an envelope, and locate a favorite. Track task completion and mistaken gestures. Keep artistic judgment and technical sharpness as separate ratings so a clinical image does not automatically win.
 
@@ -243,7 +243,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | C12 | Local double exposure | P4 | 173 | Hold the first exposure non-destructively, overlay a faint ghost silhouette, and let the same user finish the second exposure on the phone. |
 | C14 | Super 8 motion capture | P4 | 174 | Offer a 1.5-second motion companion targeting an 18fps aesthetic per shot; use a supported Live Photo or custom video companion and retain capture timestamps and audio preference. |
 | C15 | Shake accidents | P4 | 190 | Use accelerometer input during supported exposure windows to create reversible light-leak streaks or shutter-drag effects; make shake sensitivity explicit and prevent accidental activation. |
-| C16 | First frame burn | P4 | 189 | Apply an optional vertical orange-red leak to frame one of each 24-shot roll; one tap restores the untouched crop and original. |
+| C16 | First frame burn | P4 | 189 | Apply an optional vertical orange-red leak to frame one of each roll; one tap restores the untouched crop and original. |
 | C17 | Group face geometry | P5 | 228 | Apply subtle local de-stretching to faces near 24mm frame edges while protecting surrounding lines, neighboring people, and identity; keep the transform reversible. |
 | C18 | Skin-protected color | P2 | 219 | Use face or skin segmentation to preserve natural luminance and warmth under strong grades. Calibrate across the Monk Skin Tone Scale and mixed lighting without inferring identity. |
 
@@ -277,7 +277,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | R04 | Halation and bloom | P1 | 32 | Use thresholded red-orange scattering near bright edges and point lights, plus separate bloom control, through Core Image or Metal passes; avoid a uniform full-image haze. |
 | R05 | Luminance grain | P1 | 33 | Generate procedural clustered grain with stronger midtone and shadow character and finer highlights; use stable seeds so repeated rendering does not flicker or change arbitrarily. |
 | R06 | Disposable lens character | P2 | 34 | Render subtle plastic-meniscus chromatic aberration and corner vignetting as adjustable, non-destructive effects distinct from optical camera calibration. |
-| R07 | Per-roll Lab Options | P2 | 42 | Support 24- and 36-shot rolls with push or pull exposure around one stop, warm or cool scanner calibration, and dusty or clean scans; record inherited and overridden settings. |
+| R07 | Per-roll Lab Options | P2 | 42 | Apply push or pull exposure around one stop, warm or cool scanner calibration, and dusty or clean scans to an entire roll; record inherited and overridden settings. |
 | R08 | Develop Exposure dial | P1 | 69 | Expose one post-shot exposure control that re-renders from retained data and can reset to the original development without accumulating edits. |
 | R09 | Reversible film and warmth | P2 | 70 | After development, change film stock, white balance, and flash warmth without overwriting the source; preview changes quickly and render the selected version deterministically. |
 | R10 | One logical HEIF and RAW asset | P2 | 70, 97 | Prototype combined HEIF plus RAW packaging and metadata preservation; guarantee one Carbon gallery asset backed by HEIF, DNG, and recipe sidecar when other apps cannot preserve a custom container. |
@@ -292,7 +292,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | L01 | Local ownership | P1 | 48 | Store originals, recipes, and developed rolls locally with offline capture and review, ordinary file export, and a readable archive manifest independent of a Carbon server. |
 | L02 | iCloud backup and sync | P3 | 48 | Offer opt-in personal iCloud backup or sync with visible state, conflict handling, recovery, and storage controls; distinguish Carbon archive sync from Photos library syncing. |
 | L03 | Google Photos destination | P3 | 48 | Offer supported upload or export of Carbon-created media and clear backup status; use permitted Google Photos APIs and system sharing instead of assuming unrestricted library or sharing access. |
-| L04 | Roll capacity | P1 | 42, 49, 275 | Support 24- and 36-frame rolls, deterministic frame numbers, a default first roll of 24, and consistent remaining-shot counts after failed or retried captures. |
+| L04 | Rolls as albums | P1 | 42, 49, 275 | Organise shots into named rolls (open-ended, no hard frame limit). Each roll has a creation date, optional name, and a state machine: shooting → developing → ready. A new roll starts automatically when the user loads a new canister or taps New roll; the active roll collects all captures until closed. |
 | L05 | Compute-based darkroom | P1 | 36-42 | Reflect genuine queued, rendering, paused, ready, and failed states; reveal ready work without an invented mandatory wait and expose a retry when development fails. |
 | L06 | Optional delayed reveal | P2 | 131, 274 | Retain the transcript's 24-hour darkroom idea as an explicitly selected reveal ritual separate from compute time; display the actual reveal time and allow the owner to end it. |
 | L09 | Safelight processing shells | P2 | 281 | Wrap developing rolls in translucent red-orange glass; derive inverted silhouettes and growing contrast from real processing stages, with a plain textual progress alternative. |
@@ -302,7 +302,7 @@ Each record below is a build requirement. P1 through P5 locate its intended deli
 | ID | Feature | Phase | Source lines | Build and completion rule |
 | --- | --- | --- | --- | --- |
 | G01 | Lab Envelope reveal | P2 | 193-195 | Present finished rolls as a lab delivery with a tactile open action and clear ready state; opening leads directly into the contact sheet or optional culling flow. |
-| G02 | Printable contact sheet | P2 | 197 | Generate a 24-frame proof grid with four columns and six rows on black negative strips, circling highest-rated shots in grease pencil. Export share and print versions; paginate 36-shot rolls or offer a six-by-six grid. |
+| G02 | Printable contact sheet | P2 | 197 | Generate a proof grid with four columns on black negative strips, circling highest-rated shots in grease pencil. Paginate for rolls of any length; export share and print versions. |
 | G04 | Carbon Credits metadata | P2 | 199, 283 | Write supported EXIF or XMP provenance and render it on the print back. Treat the example 40/30/30 inspiration breakdown as playful copy, never a measured or affiliation claim. |
 | G05 | Light Table swipe cull | P2 | 242 | Offer an approximately 30-second review that groups near duplicates, recommends sharp eyes-open smiles, and lets users flick rejects to a recoverable bin before Photos export. |
 | G06 | Stars and ratings | P2 | 197, 243 | Allow manual stars or ratings, preserve user choices over automatic ranking, and reuse favorites for contact-sheet circles and widgets. |

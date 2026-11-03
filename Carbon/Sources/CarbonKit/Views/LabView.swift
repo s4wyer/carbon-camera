@@ -78,8 +78,8 @@ struct LabView: View {
                     bottomTabButton("Camera", active: false) {
                         coordinator.navigateTo(.camera)
                     }
-                    bottomTabButton("Library", active: false) {
-                        coordinator.navigateTo(.library)
+                    bottomTabButton("Rolls", active: false) {
+                        coordinator.navigateTo(.rolls)
                     }
                     bottomTabButton("Lab", active: true) {}
                 }

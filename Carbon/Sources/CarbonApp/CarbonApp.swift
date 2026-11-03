@@ -14,6 +14,8 @@ struct CarbonApp: App {
                     WelcomeView(coordinator: coordinator)
                 case .camera:
                     CameraView(coordinator: coordinator)
+                case .rolls:
+                    RollsView(coordinator: coordinator)
                 case .library:
                     LibraryView(coordinator: coordinator)
                 case .lab:

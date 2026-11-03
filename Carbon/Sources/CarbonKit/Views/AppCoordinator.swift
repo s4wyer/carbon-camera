@@ -11,6 +11,7 @@ final class AppCoordinator: ObservableObject {
     enum Screen {
         case welcome
         case camera
+        case rolls
         case library
         case lab
     }

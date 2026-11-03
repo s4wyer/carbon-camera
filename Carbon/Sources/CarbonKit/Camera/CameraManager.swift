@@ -295,6 +295,7 @@ final class CameraManager: NSObject, ObservableObject {
                     switch result {
                     case .success(let shot):
                         self.lastCapturedShot = shot
+                        RollStore.shared.addShot(shot.id)
                         self.logger.info("Captured shot \(shot.captureID) committed to journal")
                     case .failure(let error):
                         self.captureError = error
@@ -373,6 +374,7 @@ final class CameraManager: NSObject, ObservableObject {
                         switch result {
                         case .success(let shot):
                             self.lastCapturedShot = shot
+                            RollStore.shared.addShot(shot.id)
                         case .failure(let error):
                             self.captureError = error
                         }
