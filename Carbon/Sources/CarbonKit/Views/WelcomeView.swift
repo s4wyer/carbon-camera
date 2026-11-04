@@ -60,14 +60,9 @@ struct WelcomeView: View {
                 .frame(height: typeSize.isAccessibilitySize ? fullHeight * 0.5 : nil)
                 .background(Color("Receipt"), in: UnevenRoundedRectangle(
                     topLeadingRadius: 34, topTrailingRadius: 34))
-                .background {
-                    GeometryReader { card in
-                        Color.clear.preference(key: WelcomeCardHeight.self, value: card.size.height)
-                    }
-                }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeight = $0 }
                 .offset(y: appeared || reduceMotion ? 0 : fullHeight)
                 .animation(entrance(delay: 0), value: appeared)
-                .onPreferenceChange(WelcomeCardHeight.self) { cardHeight = $0 }
             }
             .frame(width: geometry.size.width, height: fullHeight)
             .clipped()
@@ -75,7 +70,6 @@ struct WelcomeView: View {
             .onAppear { appeared = true }
         }
         .preferredColorScheme(.light)
-        .accessibilityIdentifier("welcome-screen")
     }
 
     private func brand(compact: Bool) -> some View {
@@ -102,11 +96,6 @@ struct WelcomeView: View {
         reduceMotion ? .easeOut(duration: 0.2) :
             .spring(response: 0.56, dampingFraction: 1).delay(delay)
     }
-}
-
-private struct WelcomeCardHeight: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 private struct WelcomePhotograph: UIViewRepresentable {
