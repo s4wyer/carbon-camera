@@ -36,6 +36,10 @@ struct FilmFlapView: View {
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color("CarbonInk"))
                         .textCase(nil)
+                } footer: {
+                    Text("Natural is Carbon's default everyday look. It uses Halide's Process Zero color treatment at reduced intensity, adds grain and a gentle glow around highlights, and leaves warmth, contrast, and saturation controls neutral. It does not apply skin smoothing.")
+                        .font(.caption)
+                        .foregroundStyle(Color("SecondaryInk"))
                 }
                 
                 Section {
@@ -142,11 +146,9 @@ struct FilmFlapView: View {
                     Text(preset.displayName)
                         .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(Color("Remjet"))
-                    if let sub = presetSubtitle(preset) {
-                        Text(sub)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(Color("SecondaryInk"))
-                    }
+                    Text(preset.sourceDisplayName)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(Color("SecondaryInk"))
                 }
                 Spacer()
                 if activePreset.presetID == preset.presetID {
@@ -163,16 +165,5 @@ struct FilmFlapView: View {
         if t > 300 { return Color(red: 0.95, green: 0.7, blue: 0.4) } // warm
         if t < -300 { return Color(red: 0.5, green: 0.65, blue: 0.9) } // cool
         return Color(red: 0.55, green: 0.55, blue: 0.55) // neutral
-    }
-    
-    private func presetSubtitle(_ preset: PresetDefinition) -> String? {
-        let p = preset.baseParameters
-        var tags: [String] = []
-        if p.grainAmount > 0.1 { tags.append("grain") }
-        if p.halationIntensity > 0.05 { tags.append("halation") }
-        if p.temperatureOffsetK > 200 { tags.append("warm") }
-        if p.temperatureOffsetK < -200 { tags.append("cool") }
-        if p.contrast > 1.15 { tags.append("punchy") }
-        return tags.isEmpty ? nil : tags.joined(separator: " · ")
     }
 }

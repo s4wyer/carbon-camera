@@ -69,7 +69,7 @@ extension PresetLibrary {
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         presetID: "carbon-natural",
         displayName: "Natural",
-        description: "Lifelike color and smooth skin tones.",
+        description: "Restrained color, added grain, and a soft glow around highlights.",
         source: .original(rationale: "D-006: Process Zero film base, renamed/tuned for amateurs, portrait-optimized"),
         baseParameters: PresetParameters(
             strength: 0.85,  // Reduced from 1.0 for subtlety

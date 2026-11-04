@@ -24,16 +24,21 @@ public enum PresetGroup: String, Codable {
 }
 
 extension PresetDefinition {
+    /// The app credited for this preset, independent of its visual effects.
+    public var sourceDisplayName: String {
+        switch source {
+        case .original: return "Carbon"
+        case .halideReference: return "Halide"
+        case .lapseReference: return "Lapse"
+        case .nofusionReference: return "No Fusion"
+        }
+    }
+
     /// Cheeky display name with attribution (D-024).
     public var displayNameWithAttribution: String {
         switch source {
-        case .halideReference(let lookName, _):
-            return "\(lookName) (from Halide)"
-        case .lapseReference(let factoryName, _):
-            return "\(factoryName.capitalized) (from Lapse)"
-        case .nofusionReference(let fileID, _):
-            // No Fusion presets: use the descriptive name if available, else the ID
-            return "\(displayName) / \(fileID) (from No Fusion)"
+        case .halideReference, .lapseReference, .nofusionReference:
+            return "\(displayName) (from \(sourceDisplayName))"
         case .original:
             return displayName  // No attribution; it's ours
         }
