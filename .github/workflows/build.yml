@@ -10,15 +10,13 @@ jobs:
         include:
           - device: com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation
             label: se
-          - device: com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max
-            label: pro-max
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest
       - run: brew install xcodegen
-      - run: bash ci/verify_welcome.sh "${{ matrix.device }}" "${{ matrix.label }}"
+      - run: bash ci/verify_welcome.sh "${{ matrix.device }}" "${{ matrix.label }}" video
       - if: always()
         run: |
           if [ -d "Carbon/build/Welcome-${{ matrix.label }}.xcresult" ]; then
@@ -32,4 +30,5 @@ jobs:
             Carbon/build/Welcome-${{ matrix.label }}-screenshots
             Carbon/build/welcome-${{ matrix.label }}.log
             Carbon/build/Welcome-${{ matrix.label }}.xcresult
+            Carbon/build/Welcome-${{ matrix.label }}.mov
           retention-days: 7

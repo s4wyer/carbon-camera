@@ -38,7 +38,7 @@ struct WelcomeView: View {
                     }
                     Button(action: onOpenCamera) {
                         Text("Open camera")
-                            .font(.system(size: buttonSize, weight: .bold))
+                            .font(.system(size: max(18, buttonSize), weight: .bold))
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                             .foregroundStyle(Color("Receipt"))

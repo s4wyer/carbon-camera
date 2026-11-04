@@ -88,6 +88,18 @@ struct WelcomeCameraTransition<Content: View>: View {
                 startedAt = nil
             }
         }
+        #if DEBUG
+        .task {
+            // Simulator video harness only; production always waits for a tap.
+            guard SampleShotFixture.isEnabled,
+                  ProcessInfo.processInfo.arguments.contains("--welcome-testing"),
+                  ProcessInfo.processInfo.arguments.contains("--welcome-autoplay") else { return }
+            do {
+                try await Task.sleep(for: .seconds(2))
+                openCamera()
+            } catch { }
+        }
+        #endif
     }
 
     private var usesReducedMotion: Bool {
