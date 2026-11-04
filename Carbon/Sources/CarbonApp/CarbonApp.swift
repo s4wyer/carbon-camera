@@ -28,9 +28,9 @@ struct CarbonApp: App {
                 } else {
                     WelcomeCameraTransition(coordinator: coordinator) {
                         switch coordinator.currentScreen {
-                        case .welcome:
-                            Color("Remjet").ignoresSafeArea()
-                        case .camera:
+                        case .welcome, .camera:
+                            // Prepare the preview under the welcome cover, but
+                            // activate capture only when the route is camera.
                             CameraView(coordinator: coordinator)
                         case .rolls:
                             RollsView(coordinator: coordinator)

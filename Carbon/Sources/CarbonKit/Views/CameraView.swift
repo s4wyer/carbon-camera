@@ -245,12 +245,12 @@ struct CameraView: View {
             lastShotThumbnail = await PhotoThumbnailCache.shared.thumbnail(for: shot)
         }
         .onAppear {
-            if !SampleShotFixture.isEnabled, coordinator.cameraPermissionStatus == .authorized {
-                cameraManager.startSession()
+            if coordinator.currentScreen == .camera {
+                activateCamera()
             }
-            volumeObserver.onShutterPress = { triggerShutter() }
-            volumeObserver.start()
-            levelDetector.start()
+        }
+        .onChange(of: coordinator.currentScreen) { _, screen in
+            if screen == .camera { activateCamera() }
         }
         .onDisappear {
             cameraManager.stopSession()
@@ -258,7 +258,7 @@ struct CameraView: View {
             levelDetector.stop()
         }
         .onChange(of: coordinator.cameraPermissionStatus) { _, status in
-            if status == .authorized, !SampleShotFixture.isEnabled {
+            if status == .authorized, coordinator.currentScreen == .camera, !SampleShotFixture.isEnabled {
                 cameraManager.startSession()
             }
         }
@@ -280,6 +280,15 @@ struct CameraView: View {
     }
     
     // MARK: - Helpers
+
+    private func activateCamera() {
+        if !SampleShotFixture.isEnabled, coordinator.cameraPermissionStatus == .authorized {
+            cameraManager.startSession()
+        }
+        volumeObserver.onShutterPress = { triggerShutter() }
+        volumeObserver.start()
+        levelDetector.start()
+    }
     
     private var exposureEVText: String {
         if exposureEV == 0 {

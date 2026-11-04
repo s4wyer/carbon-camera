@@ -36,10 +36,17 @@ def package(source: Path, destination: Path, device: str) -> int:
 
 def gallery(destination: Path) -> None:
     cards = []
+    order = {name: index for index, name in enumerate([
+        'welcome-resting', 'welcome-leak-start', 'welcome-leak-peak-before',
+        'welcome-leak-peak-after', 'welcome-leak-end', 'welcome-leak-camera',
+        'welcome-reduce-motion-camera', 'welcome-after-rapid-taps',
+        'welcome-permission-denied', 'welcome-accessibility-xxxl',
+        'welcome-accessibility-xxxl-scrolled',
+    ])}
     for device in ('se', 'pro-max'):
         if (destination / device / 'transition.mov').exists():
             cards.append(f'<figure><video controls preload="metadata" src="{device}/transition.mov"></video><figcaption>{device} / actual timed transition</figcaption></figure>')
-        for image in sorted((destination / device).glob('*.png')):
+        for image in sorted((destination / device).glob('*.png'), key=lambda p: order.get(p.stem, 99)):
             relative = image.relative_to(destination).as_posix()
             title = html.escape(f'{device} / {image.stem.removeprefix("welcome-")}')
             cards.append(f'<figure><a href="{relative}"><img loading="lazy" src="{relative}" alt="{title}"></a><figcaption>{title}</figcaption></figure>')
