@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreMedia
 
 /// B01 / O01 — application entry. Guest, offline, no account.
 /// Coordinator manages navigation between Welcome, Camera, and Library.
