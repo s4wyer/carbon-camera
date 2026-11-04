@@ -8,7 +8,7 @@ public class PresetFavorites: ObservableObject {
     public static let shared = PresetFavorites()
     
     private let favoritesKey = "CarbonPresetFavorites"
-    private(set) public var favoriteIDs: Set<String> = []
+    @Published private(set) public var favoriteIDs: Set<String> = []
     
     private init() {
         load()

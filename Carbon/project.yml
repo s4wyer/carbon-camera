@@ -88,12 +88,25 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.carbon.CarbonTests
         GENERATE_INFOPLIST_FILE: YES
 
+  CarbonUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/CarbonUITests
+    dependencies:
+      - target: Carbon
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.carbon.CarbonUITests
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Carbon:
     build:
       targets:
         Carbon: all
         CarbonKitTests: [test]
+        CarbonUITests: [test]
     run:
       config: Debug
     test:
@@ -101,5 +114,6 @@ schemes:
       gatherCoverageData: true
       targets:
         - CarbonKitTests
+        - CarbonUITests
     archive:
       config: Release

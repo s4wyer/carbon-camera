@@ -46,6 +46,7 @@ struct CameraView: View {
                         .background(Color("Receipt").opacity(0.08))
                         .clipShape(Capsule())
                     }
+                    .accessibilityIdentifier("preset-name-button")
                     
                     Spacer()
                     
@@ -72,6 +73,7 @@ struct CameraView: View {
                                 .background(Color("Receipt").opacity(0.08))
                                 .clipShape(Circle())
                         }
+                        .accessibilityIdentifier("settings-button")
                     }
                 }
                 .padding(.horizontal, 20)
@@ -159,6 +161,7 @@ struct CameraView: View {
                                 }
                             }
                         }
+                        .accessibilityIdentifier("rolls-button")
                         .frame(width: 60)
                         
                         Spacer()

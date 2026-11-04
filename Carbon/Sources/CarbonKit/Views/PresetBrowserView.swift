@@ -143,16 +143,16 @@ struct PresetBrowserView: View {
     
     @ViewBuilder
     private func presetCard(_ preset: PresetDefinition) -> some View {
-        Button(action: {
-            activePreset = preset
-            isPresented = false
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Box art
+        VStack(alignment: .leading, spacing: 0) {
+            // Box art (tap to select preset)
+            Button(action: {
+                activePreset = preset
+                isPresented = false
+            }) {
                 ZStack(alignment: .topTrailing) {
                     PresetBoxArtView(preset: preset, isSelected: activePreset.presetID == preset.presetID)
                     
-                    // Favorite heart button
+                    // Favorite heart button (separate hit target)
                     Button(action: {
                         favorites.toggleFavorite(preset)
                     }) {
@@ -164,38 +164,40 @@ struct PresetBrowserView: View {
                             .clipShape(Circle())
                     }
                     .padding(8)
+                    .buttonStyle(.plain)
                 }
-                
-                // Preset info below card
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(preset.displayName)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color("Receipt"))
-                        .lineLimit(1)
-                    
-                    Text(preset.sourceDisplayName)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(Color("Receipt").opacity(0.6))
-                        .lineLimit(1)
-                    
-                    // Info button
-                    Button(action: {
-                        showingPresetDetail = preset
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "info.circle")
-                                .font(.system(size: 10))
-                            Text("Details")
-                                .font(.system(size: 10, weight: .medium))
-                        }
-                        .foregroundColor(Color("Brass"))
-                        .padding(.top, 2)
-                    }
-                }
-                .padding(.top, 8)
             }
+            .buttonStyle(.plain)
+            
+            // Preset info below card
+            VStack(alignment: .leading, spacing: 3) {
+                Text(preset.displayName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color("Receipt"))
+                    .lineLimit(1)
+                
+                Text(preset.sourceDisplayName)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(Color("Receipt").opacity(0.6))
+                    .lineLimit(1)
+                
+                // Info button (separate hit target)
+                Button(action: {
+                    showingPresetDetail = preset
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 10))
+                        Text("Details")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(Color("Brass"))
+                    .padding(.top, 2)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 8)
         }
-        .buttonStyle(.plain)
     }
 }
 
