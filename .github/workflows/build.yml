@@ -141,3 +141,93 @@ jobs:
       - name: Check asset integrity
         run: |
           python ci/check_assets.py
+
+  screenshots:
+    name: Capture UI Screenshots
+    runs-on: macos-15
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest'
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+          
+      - name: Generate Xcode project
+        run: |
+          cd Carbon
+          xcodegen generate
+          
+      - name: Build app for simulator
+        run: |
+          set -euo pipefail
+          cd Carbon
+          
+          # Select an iPhone simulator
+          SIMULATOR_ID=$(xcrun simctl list devices available | \
+            grep -E 'iPhone 16|iPhone 15 Pro' | head -1 | \
+            sed -E 's/.*\(([0-9A-Fa-f-]{36})\).*/\1/')
+          
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "::error::No suitable iPhone simulator found"
+            exit 1
+          fi
+          
+          echo "Selected simulator: $SIMULATOR_ID"
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> $GITHUB_ENV
+          
+          # Build for simulator
+          xcodebuild build \
+            -project Carbon.xcodeproj \
+            -scheme Carbon \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath ./build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+          
+          # Find the built app
+          APP_PATH=$(find ./build/DerivedData/Build/Products -name "Carbon.app" -type d | head -1)
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+          echo "Built app at: $APP_PATH"
+      
+      - name: Capture screenshots
+        run: |
+          set -euo pipefail
+          mkdir -p ./screenshots
+          
+          # Run screenshot automation
+          bash ci/ui_testing/capture_screenshots.sh \
+            "$SIMULATOR_ID" \
+            "$APP_PATH" \
+            ./screenshots
+      
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-UI-Screenshots
+          path: screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 30
+      
+      - name: Add screenshots to summary
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## 📸 UI Screenshots
+          
+          Screenshots of all major screens captured from iOS Simulator:
+          
+          - **01-welcome.png** - Welcome/onboarding screen
+          - **02-camera.png** - Camera viewfinder with preset selector
+          - **03-preset-menu.png** - Preset browser with film box art
+          - **04-rolls.png** - Rolls/gallery screen
+          - **05-settings.png** - Settings and attribution
+          
+          Download the **Carbon-UI-Screenshots** artifact to view.
+          EOF
