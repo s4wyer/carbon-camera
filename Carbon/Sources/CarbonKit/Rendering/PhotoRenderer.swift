@@ -7,13 +7,13 @@ import os.log
 
 /// Photo renderer: Applies ToneChain preset pipeline to captured RAW+HEVC photos
 /// Implements D-005 render order with CIContext and 3D color cubes for deterministic output.
-@MainActor
-final class PhotoRenderer: ObservableObject {
+final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let ciContext: CIContext
     private let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
     private let logger = Logger(subsystem: "app.carbon", category: "PhotoRenderer")
+    private let renderQueue = DispatchQueue(label: "app.carbon.photo-renderer", qos: .utility)
     
     init?() {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -42,33 +42,59 @@ final class PhotoRenderer: ObservableObject {
     func render(
         shot: Shot,
         preset: PresetDefinition,
-        parameters: PresetParameters
+        parameters: PresetParameters,
+        cancellation: RenderCancellationToken
     ) async throws -> RenderRevision {
+        try cancellation.throwIfCancelled()
+        return try await withCheckedThrowingContinuation { continuation in
+            renderQueue.async { [self] in
+                do {
+                    let revision = try renderSynchronously(
+                        shot: shot,
+                        preset: preset,
+                        parameters: parameters,
+                        cancellation: cancellation
+                    )
+                    continuation.resume(returning: revision)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func renderSynchronously(
+        shot: Shot,
+        preset: PresetDefinition,
+        parameters: PresetParameters,
+        cancellation: RenderCancellationToken
+    ) throws -> RenderRevision {
         logger.info("Starting render: shot=\(shot.id), preset=\(preset.presetID)")
-        
-        guard let sourceImage = try await loadSourceImage(shot: shot) else {
+
+        guard let sourceImage = loadSourceImage(shot: shot) else {
             throw RenderError.sourceNotFound
         }
-        
-        // Apply ToneChain pipeline
-        let processedImage = try await applyToneChain(
+        try cancellation.throwIfCancelled()
+
+        let processedImage = try applyToneChain(
             to: sourceImage,
-            parameters: parameters
+            parameters: parameters,
+            cancellation: cancellation
         )
-        
-        // Encode to HEVC (or JPEG fallback)
-        let outputData = try await encodeOutput(processedImage)
-        
-        // Compute SHA-256 integrity hash
+        try cancellation.throwIfCancelled()
+
+        let outputData = try encodeOutput(processedImage)
+        try cancellation.throwIfCancelled()
+
         let digest = SHA256.hash(data: outputData)
         let hashString = digest.compactMap { String(format: "%02x", $0) }.joined()
-        
-        // Write to persistent storage
+        try cancellation.throwIfCancelled()
+
         let revisionID = UUID()
         let filename = "\(shot.captureID)_\(revisionID.uuidString).heic"
         let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try outputData.write(to: outputURL, options: .atomic)
-        
+
         let revision = RenderRevision(
             id: revisionID,
             recipeVersionID: shot.currentRecipe.id,
@@ -77,7 +103,7 @@ final class PhotoRenderer: ObservableObject {
             outputHash: hashString,
             renderingEngine: "ci-metal-tonechain"
         )
-        
+
         logger.info("Render complete: revision=\(revision.id), sha256=\(hashString)")
         return revision
     }
@@ -87,12 +113,26 @@ final class PhotoRenderer: ObservableObject {
         image: CIImage,
         parameters: PresetParameters
     ) async throws -> CIImage {
-        return try await applyToneChain(to: image, parameters: parameters)
+        let sendableImage = UncheckedSendable(image)
+        return try await withCheckedThrowingContinuation { continuation in
+            renderQueue.async { [self, sendableImage] in
+                do {
+                    let result = try applyToneChain(
+                        to: sendableImage.value,
+                        parameters: parameters,
+                        cancellation: RenderCancellationToken()
+                    )
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
     
     // MARK: - Source Loading
     
-    private func loadSourceImage(shot: Shot) async throws -> CIImage? {
+    private func loadSourceImage(shot: Shot) -> CIImage? {
         // Priority 1: Check primary SourceResource URL
         for source in shot.sources {
             if FileManager.default.fileExists(atPath: source.mediaURL.path) {
@@ -108,11 +148,11 @@ final class PhotoRenderer: ObservableObject {
         
         // Priority 2: Try journal base directory
         let journal = CaptureJournal.shared
-        let candidateHEIC = await journal.fileURL(for: "\(shot.captureID).heic")
+        let candidateHEIC = journal.fileURL(for: "\(shot.captureID).heic")
         if FileManager.default.fileExists(atPath: candidateHEIC.path) {
             return CIImage(contentsOf: candidateHEIC)
         }
-        let candidateDNG = await journal.fileURL(for: "\(shot.captureID).dng")
+        let candidateDNG = journal.fileURL(for: "\(shot.captureID).dng")
         if FileManager.default.fileExists(atPath: candidateDNG.path) {
             if let rawFilter = CIRAWFilter(imageURL: candidateDNG) {
                 return rawFilter.outputImage
@@ -127,15 +167,19 @@ final class PhotoRenderer: ObservableObject {
     
     private func applyToneChain(
         to inputImage: CIImage,
-        parameters: PresetParameters
-    ) async throws -> CIImage {
+        parameters: PresetParameters,
+        cancellation: RenderCancellationToken
+    ) throws -> CIImage {
         var current = inputImage
+        try cancellation.throwIfCancelled()
         
         // 1. Exposure (EV bias)
         if abs(parameters.exposureEV) > 0.001 {
             current = applyExposure(to: current, ev: parameters.exposureEV)
         }
         
+        try cancellation.throwIfCancelled()
+
         // 2. White Balance (Temperature + Tint)
         if abs(parameters.temperatureOffsetK) > 0.1 || abs(parameters.tintOffset) > 0.001 {
             current = applyTemperatureAndTint(
@@ -166,9 +210,16 @@ final class PhotoRenderer: ObservableObject {
             )
         }
         
+        try cancellation.throwIfCancelled()
+
         // 6. 3D LUT (No Fusion or Halide cube)
         if let lutID = parameters.lutID, !lutID.isEmpty {
-            current = try await applyLUT(to: current, lutID: lutID, intensity: parameters.lutIntensity)
+            current = try applyLUT(
+                to: current,
+                lutID: lutID,
+                intensity: parameters.lutIntensity,
+                cancellation: cancellation
+            )
         }
         
         // 7. Contrast & Saturation
@@ -200,6 +251,8 @@ final class PhotoRenderer: ObservableObject {
             )
         }
         
+        try cancellation.throwIfCancelled()
+
         // 12. Grain
         if parameters.grainAmount > 0.001 {
             current = applyGrain(
@@ -348,8 +401,15 @@ final class PhotoRenderer: ObservableObject {
         return blend.outputImage ?? image
     }
     
-    private func applyLUT(to image: CIImage, lutID: String, intensity: Float = 1.0) async throws -> CIImage {
+    private func applyLUT(
+        to image: CIImage,
+        lutID: String,
+        intensity: Float = 1.0,
+        cancellation: RenderCancellationToken
+    ) throws -> CIImage {
+        try cancellation.throwIfCancelled()
         let lutData = try LUTResources.shared.load(lutID: lutID)
+        try cancellation.throwIfCancelled()
         let rawData = lutData.rgba.withUnsafeBufferPointer { buffer in
             Data(buffer: buffer)
         }
@@ -378,7 +438,7 @@ final class PhotoRenderer: ObservableObject {
         return lutOutput
     }
     
-    private func encodeOutput(_ image: CIImage) async throws -> Data {
+    private func encodeOutput(_ image: CIImage) throws -> Data {
         // Try HEIF first
         if let heifData = ciContext.heifRepresentation(
             of: image,
