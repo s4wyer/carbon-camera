@@ -187,19 +187,36 @@ jobs:
             -resultBundlePath ./build/UITestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO
       
+      - name: Export PNG screenshots and browser gallery
+        if: always()
+        run: |
+          python3 ci/export_screenshots.py Carbon/build/UITestResults.xcresult Carbon/build/UIScreenshots
+
       - name: Upload screenshots
+        id: screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Carbon-UI-Screenshots
+          path: Carbon/build/UIScreenshots/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload UI test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-UI-Test-Results
           path: Carbon/build/UITestResults.xcresult
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 14
       
       - name: Add screenshots to summary
-        if: always()
+        if: steps.screenshots.outcome == 'success'
+        env:
+          SCREENSHOTS_URL: ${{ steps.screenshots.outputs.artifact-url }}
         run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
           ## 📸 UI Screenshots
           
           Screenshots of all major screens captured from iOS Simulator:
@@ -210,6 +227,7 @@ jobs:
           - **04-rolls.png** - Rolls/gallery screen
           - **05-settings.png** - Settings and attribution
           
-          Download the **Carbon-UI-Screenshots** artifact and open `UITestResults.xcresult`
-          in Xcode to view the screenshot attachments.
+          Download [Carbon-UI-Screenshots]($SCREENSHOTS_URL), extract the ZIP, and open
+          **index.html** in any browser. The five PNG files can also be viewed or shared individually.
+          Raw Xcode results are available separately in **Carbon-UI-Test-Results**.
           EOF
