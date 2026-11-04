@@ -27,18 +27,18 @@ struct CarbonApp: App {
                     }
                 } else {
                     WelcomeCameraTransition(coordinator: coordinator) {
-                    switch coordinator.currentScreen {
-                    case .welcome:
-                        Color("Remjet").ignoresSafeArea()
-                    case .camera:
-                        CameraView(coordinator: coordinator)
-                    case .rolls:
-                        RollsView(coordinator: coordinator)
-                    case .library:
-                        LibraryView(coordinator: coordinator)
-                    case .lab:
-                        LabView(coordinator: coordinator)
-                    }
+                        switch coordinator.currentScreen {
+                        case .welcome:
+                            Color("Remjet").ignoresSafeArea()
+                        case .camera:
+                            CameraView(coordinator: coordinator)
+                        case .rolls:
+                            RollsView(coordinator: coordinator)
+                        case .library:
+                            LibraryView(coordinator: coordinator)
+                        case .lab:
+                            LabView(coordinator: coordinator)
+                        }
                     }
                 }
             }

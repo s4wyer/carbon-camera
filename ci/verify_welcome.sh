@@ -14,7 +14,8 @@ xcrun simctl status_bar "$DEVICE" override --time '9:41' --dataNetwork wifi --wi
 mkdir -p build
 xcodebuild test -project Carbon.xcodeproj -scheme Carbon \
   -destination "platform=iOS Simulator,id=$DEVICE" \
-  -only-testing:CarbonUITests/WelcomeUITests -parallel-testing-enabled NO \
+  -only-testing:CarbonUITests/WelcomeUITests -only-testing:CarbonKitTests/WelcomeHandoffTests \
+  -parallel-testing-enabled NO \
   -derivedDataPath build/WelcomeDerivedData \
   -resultBundlePath "build/Welcome-$LABEL.xcresult" \
   CODE_SIGNING_ALLOWED=NO 2>&1 | tee "build/welcome-$LABEL.log"

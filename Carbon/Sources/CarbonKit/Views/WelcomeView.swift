@@ -4,6 +4,7 @@ import UIKit
 struct WelcomeView: View {
     let onOpenCamera: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var appeared = false
     @State private var cardHeight: CGFloat = 0
     @ScaledMetric(relativeTo: .title3) private var buttonSize = 20
@@ -25,21 +26,16 @@ struct WelcomeView: View {
                 .allowsHitTesting(false)
 
                 VStack(spacing: compact ? 10 : 14) {
-                    Text("carbon")
-                        .font(.system(size: compact ? 46 : 56, weight: .regular, design: .serif))
-                        .tracking(-2)
-                        .foregroundStyle(Color("Remjet"))
-                        .offset(y: appeared ? 0 : 12)
-                        .opacity(appeared ? 1 : 0)
-                        .animation(entrance(delay: 0.08), value: appeared)
-                    Text("A camera worth carrying.")
-                        .font(.body)
-                        .foregroundStyle(Color("Remjet").opacity(0.72))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .offset(y: appeared ? 0 : 12)
-                        .opacity(appeared ? 1 : 0)
-                        .animation(entrance(delay: 0.14), value: appeared)
+                    if typeSize.isAccessibilitySize {
+                        ScrollView {
+                            brand(compact: compact)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .scrollIndicators(.hidden)
+                        .accessibilityIdentifier("welcome-card-copy")
+                    } else {
+                        brand(compact: compact)
+                    }
                     Button(action: onOpenCamera) {
                         Text("Open camera")
                             .font(.system(size: buttonSize, weight: .bold))
@@ -61,6 +57,7 @@ struct WelcomeView: View {
                 .padding(.top, compact ? 20 : 28)
                 .padding(.bottom, max(geometry.safeAreaInsets.bottom, 18) + 12)
                 .frame(maxWidth: .infinity)
+                .frame(height: typeSize.isAccessibilitySize ? fullHeight * 0.5 : nil)
                 .background(Color("Receipt"), in: UnevenRoundedRectangle(
                     topLeadingRadius: 34, topTrailingRadius: 34))
                 .background {
@@ -79,6 +76,26 @@ struct WelcomeView: View {
         }
         .preferredColorScheme(.light)
         .accessibilityIdentifier("welcome-screen")
+    }
+
+    private func brand(compact: Bool) -> some View {
+        VStack(spacing: compact ? 10 : 14) {
+            Text("carbon")
+                .font(.system(size: compact ? 46 : 56, weight: .regular, design: .serif))
+                .tracking(-2)
+                .foregroundStyle(Color("Remjet"))
+                .offset(y: appeared ? 0 : 12)
+                .opacity(appeared ? 1 : 0)
+                .animation(entrance(delay: 0.08), value: appeared)
+            Text("A camera worth carrying.")
+                .font(.body)
+                .foregroundStyle(Color("Remjet").opacity(0.72))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .offset(y: appeared ? 0 : 12)
+                .opacity(appeared ? 1 : 0)
+                .animation(entrance(delay: 0.14), value: appeared)
+        }
     }
 
     private func entrance(delay: Double) -> Animation {
@@ -118,10 +135,13 @@ final class PhotographBackdrop: UIView {
         UIColor(named: "Receipt")?.setFill()
         context.fill(bounds)
         // Reserve measured card height, including accessibility text sizes.
-        let available = max(1, bounds.height - cardHeight - safeAreaInsets.top - 12)
-        let width = min(bounds.width, available * image.size.width / image.size.height)
+        let width = bounds.width
         let height = width * image.size.height / image.size.width
-        let y = max(safeAreaInsets.top, (bounds.height - cardHeight - height) * 0.5)
+        // At accessibility sizes the card's copy scrolls independently and the
+        // width-fit photo shifts into its empty upper backdrop, never shrinking
+        // into a floating square or extending the blue paper/film sideways.
+        let freeHeight = bounds.height - cardHeight
+        let y = min(max(safeAreaInsets.top, (freeHeight - height) * 0.5), freeHeight - height - 12)
         let photo = CGRect(x: (bounds.width - width) / 2, y: y, width: width, height: height)
         func edge(_ crop: CGRect, into destination: CGRect) {
             guard destination.width > 0, destination.height > 0,
@@ -133,12 +153,38 @@ final class PhotographBackdrop: UIView {
              into: CGRect(x: photo.minX, y: 0, width: width, height: photo.minY + 1))
         edge(CGRect(x: 0, y: h - 1, width: w, height: 1),
              into: CGRect(x: photo.minX, y: photo.maxY - 1, width: width, height: bounds.height - photo.maxY + 1))
-        if width < bounds.width {
-            edge(CGRect(x: 0, y: 0, width: 1, height: h),
-                 into: CGRect(x: 0, y: y, width: photo.minX + 1, height: height))
-            edge(CGRect(x: w - 1, y: 0, width: 1, height: h),
-                 into: CGRect(x: photo.maxX - 1, y: y, width: bounds.width - photo.maxX + 1, height: height))
+        // Fade the extended edge texture into its sampled mean within 24pt.
+        // The gradient is clipped strictly outside the photograph, preserving
+        // its original pixels while avoiding long, stretched texture streaks.
+        func soften(_ crop: CGRect, from start: CGPoint, to end: CGPoint, clip: CGRect) {
+            guard clip.height > 0, let row = cgImage.cropping(to: crop) else { return }
+            var rgba = [UInt8](repeating: 0, count: 4)
+            let sampled = rgba.withUnsafeMutableBytes { bytes -> Bool in
+                guard let sampler = CGContext(data: bytes.baseAddress, width: 1, height: 1,
+                    bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+                sampler.interpolationQuality = .high
+                sampler.draw(row, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+                return true
+            }
+            guard sampled else { return }
+            let color = UIColor(red: CGFloat(rgba[0]) / 255, green: CGFloat(rgba[1]) / 255,
+                                blue: CGFloat(rgba[2]) / 255, alpha: 1)
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: [color.withAlphaComponent(0).cgColor, color.cgColor] as CFArray,
+                locations: [0, 1]) else { return }
+            context.saveGState()
+            context.clip(to: clip)
+            context.drawLinearGradient(gradient, start: start, end: end,
+                                       options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            context.restoreGState()
         }
+        soften(CGRect(x: 0, y: 0, width: w, height: 1),
+               from: CGPoint(x: 0, y: photo.minY), to: CGPoint(x: 0, y: photo.minY - 24),
+               clip: CGRect(x: 0, y: 0, width: width, height: max(0, photo.minY)))
+        soften(CGRect(x: 0, y: h - 1, width: w, height: 1),
+               from: CGPoint(x: 0, y: photo.maxY), to: CGPoint(x: 0, y: photo.maxY + 24),
+               clip: CGRect(x: 0, y: photo.maxY, width: width, height: max(0, bounds.height - photo.maxY)))
         image.draw(in: photo)
     }
 }

@@ -5,20 +5,20 @@ import XCTest
 final class WelcomeUITests: XCTestCase {
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    @MainActor private func prepare() {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--insert-sample-shot", "--welcome-testing"]
     }
 
-    private func save(_ name: String) {
+    @MainActor private func save(_ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
     }
 
-    private func respondToPermission(allow: Bool) {
+    @MainActor private func respondToPermission(allow: Bool) {
         let alert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
         if alert.waitForExistence(timeout: 4) {
             if allow {
@@ -31,7 +31,8 @@ final class WelcomeUITests: XCTestCase {
         }
     }
 
-    func testRestingAndTransitionCheckpoints() throws {
+    @MainActor func testRestingAndTransitionCheckpoints() async throws {
+        prepare()
         app.launch()
         XCTAssertTrue(app.buttons["Open camera"].waitForExistence(timeout: 30))
         XCTAssertFalse(app.staticTexts["No account. Just pictures."].exists)
@@ -50,7 +51,8 @@ final class WelcomeUITests: XCTestCase {
         }
     }
 
-    func testRapidTapsThenCameraIsInteractive() throws {
+    @MainActor func testRapidTapsThenCameraIsInteractive() async throws {
+        prepare()
         app.resetAuthorizationStatus(for: .camera)
         app.launch()
         let button = app.buttons["Open camera"]
@@ -67,7 +69,8 @@ final class WelcomeUITests: XCTestCase {
         XCTAssertTrue(preset.waitForExistence(timeout: 5))
     }
 
-    func testReduceMotion() throws {
+    @MainActor func testReduceMotion() async throws {
+        prepare()
         app.launchArguments.append("--welcome-reduce-motion")
         app.launch()
         let button = app.buttons["Open camera"]
@@ -79,7 +82,8 @@ final class WelcomeUITests: XCTestCase {
         save("welcome-reduce-motion-camera")
     }
 
-    func testDeniedPermissionStillReachesCamera() throws {
+    @MainActor func testDeniedPermissionStillReachesCamera() async throws {
+        prepare()
         app.resetAuthorizationStatus(for: .camera)
         app.launchArguments = ["--welcome-testing"]
         app.launch()
@@ -92,13 +96,16 @@ final class WelcomeUITests: XCTestCase {
         save("welcome-permission-denied")
     }
 
-    func testAccessibilityTextSize() throws {
+    @MainActor func testAccessibilityTextSize() async throws {
+        prepare()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         let button = app.buttons["Open camera"]
         XCTAssertTrue(button.waitForExistence(timeout: 30))
         XCTAssertTrue(button.isHittable)
-        XCTAssertTrue(app.staticTexts["A camera worth carrying."].isHittable)
+        XCTAssertTrue(app.staticTexts["A camera worth carrying."].exists)
         save("welcome-accessibility-xxxl")
+        app.scrollViews["welcome-card-copy"].swipeUp()
+        save("welcome-accessibility-xxxl-scrolled")
     }
 }
