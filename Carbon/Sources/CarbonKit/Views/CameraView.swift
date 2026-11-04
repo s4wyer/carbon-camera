@@ -14,11 +14,10 @@ struct CameraView: View {
     
     // UI state
     @State private var selectedFocal: Double = 35.0
-    @State private var moodExposure: Float = 0.0
-    @State private var warmthStep: Int = 1
-    @State private var showFilmFlap = false
+    @State private var exposureEV: Float = 0.0
+    @State private var showPresetMenu = false
+    @State private var showSettings = false
     @State private var activePreset: PresetDefinition = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
-    @State private var flapFlashMode: FilmFlapView.FlashMode = .auto
     @State private var lastShotThumbnail: UIImage?
     
     var body: some View {
@@ -29,37 +28,53 @@ struct CameraView: View {
             
             VStack(spacing: 0) {
                 // Top header bar (over preview)
-                HStack {
-                    Button(action: { showFilmFlap = true }) {
-                        Text(activePreset.displayName.uppercased())
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.9))
-                            .tracking(1.5)
+                HStack(alignment: .center) {
+                    // Tapping the preset name opens the preset menu
+                    Button(action: { showPresetMenu = true }) {
+                        HStack(spacing: 6) {
+                            Text(activePreset.displayName.uppercased())
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .foregroundColor(Color("Receipt"))
+                                .tracking(1.5)
+                            
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(Color("Receipt").opacity(0.6))
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(Color("Receipt").opacity(0.08))
+                        .clipShape(Capsule())
                     }
                     
                     Spacer()
                     
-                    // Flash / Warmth toggle
-                    HStack(spacing: 8) {
+                    // Right: Flash toggle + Settings button
+                    HStack(spacing: 12) {
                         Button(action: {
-                            // Cycle through flash modes to stay in sync with flap
-                            let modes: [FilmFlapView.FlashMode] = [.auto, .on, .off]
-                            let idx = (modes.firstIndex(of: flapFlashMode) ?? 0 + 1) % 3
-                            flapFlashMode = modes[idx]
                             cameraManager.cycleFlashMode()
                         }) {
                             Image(systemName: flashIcon)
-                                .font(.system(size: 12))
-                                .foregroundColor(cameraManager.isCapacitorReady ? Color("Safelight") : .white.opacity(0.5))
+                                .font(.system(size: 14))
+                                .foregroundColor(cameraManager.activeFlashMode == .on ? Color("Safelight") : Color("Receipt").opacity(0.8))
+                                .frame(width: 36, height: 36)
+                                .background(Color("Receipt").opacity(0.08))
+                                .clipShape(Circle())
                         }
                         
-                        Text("WARM \(String(format: "%02d", warmthStep))")
-                            .font(.system(size: 13, weight: .regular, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.9))
-                            .tracking(1.0)
+                        Button(action: {
+                            showSettings = true
+                        }) {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 14))
+                                .foregroundColor(Color("Receipt").opacity(0.8))
+                                .frame(width: 36, height: 36)
+                                .background(Color("Receipt").opacity(0.08))
+                                .clipShape(Circle())
+                        }
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 12)
                 
@@ -70,10 +85,10 @@ struct CameraView: View {
                         .gesture(
                             DragGesture(minimumDistance: 10)
                                 .onChanged { val in
-                                    // Vertical preview swipe adjusts Mood EV bias (U02)
+                                    // Vertical preview swipe adjusts exposure bias
                                     let deltaEV = Float(-val.translation.height / 150.0)
-                                    moodExposure = max(-2.0, min(2.0, deltaEV))
-                                    cameraManager.setExposureBias(moodExposure)
+                                    exposureEV = max(-2.0, min(2.0, deltaEV))
+                                    cameraManager.setExposureBias(exposureEV)
                                 }
                         )
                         .onTapGesture { location in
@@ -165,16 +180,16 @@ struct CameraView: View {
                         
                         Spacer()
                         
-                        // Right: Rotary MOOD dial (-2 to +2 EV) (U02, R08)
+                        // Right: Exposure compensation control (-2 to +2 EV)
                         VStack(spacing: 4) {
-                            RotaryMoodDial(value: $moodExposure) { newEV in
+                            ExposureEVControl(value: $exposureEV) { newEV in
                                 cameraManager.setExposureBias(newEV)
                             }
                             
-                            Text("MOOD")
-                                .font(.system(size: 9, weight: .regular, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.7))
-                                .tracking(1.0)
+                            Text(exposureEVText)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundColor(exposureEV == 0 ? Color("Receipt").opacity(0.6) : Color("Brass"))
+                                .tracking(0.5)
                         }
                         .frame(width: 60)
                     }
@@ -201,20 +216,17 @@ struct CameraView: View {
             volumeObserver.stop()
             levelDetector.stop()
         }
-        .sheet(isPresented: $showFilmFlap) {
-            FilmFlapView(
+        .sheet(isPresented: $showPresetMenu) {
+            PresetBrowserView(
                 activePreset: $activePreset,
-                flashMode: $flapFlashMode,
-                isPresented: $showFilmFlap
+                isPresented: $showPresetMenu
             )
         }
-        .onChange(of: flapFlashMode) { _, mode in
-            // Sync flash selection from flap to camera manager
-            switch mode {
-            case .auto: cameraManager.setFlashMode(.auto)
-            case .on:   cameraManager.setFlashMode(.on)
-            case .off:  cameraManager.setFlashMode(.off)
-            }
+        .sheet(isPresented: $showSettings) {
+            CameraSettingsView(
+                cameraManager: cameraManager,
+                isPresented: $showSettings
+            )
         }
         .onChange(of: activePreset) { _, newPreset in
             cameraManager.setActivePreset(newPreset)
@@ -222,6 +234,16 @@ struct CameraView: View {
     }
     
     // MARK: - Helpers
+    
+    private var exposureEVText: String {
+        if exposureEV == 0 {
+            return "±0 EV"
+        } else if exposureEV > 0 {
+            return String(format: "+%.1f EV", exposureEV)
+        } else {
+            return String(format: "%.1f EV", exposureEV)
+        }
+    }
     
     private var flashIcon: String {
         switch cameraManager.activeFlashMode {
@@ -321,54 +343,35 @@ private struct CornerBrightlinesView: View {
     }
 }
 
-// MARK: - Rotary MOOD Dial (U02, R08)
+// MARK: - Exposure EV Control
 
-private struct RotaryMoodDial: View {
+private struct ExposureEVControl: View {
     @Binding var value: Float
     let onChange: (Float) -> Void
     
     var body: some View {
         ZStack {
-            // Metallic dial face
+            // Background disc
             Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(white: 0.35), Color(white: 0.15)],
-                        center: .center,
-                        startRadius: 2,
-                        endRadius: 24
-                    )
-                )
-                .frame(width: 46, height: 46)
+                .fill(Color("Receipt").opacity(0.12))
+                .frame(width: 44, height: 44)
                 .overlay(
-                    Circle().stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    Circle()
+                        .stroke(value != 0 ? Color("Brass") : Color("Receipt").opacity(0.2), lineWidth: 1)
                 )
             
-            // Radial tick marks
-            ForEach(0..<12) { i in
-                Rectangle()
-                    .fill(Color.white.opacity(i % 3 == 0 ? 0.6 : 0.25))
-                    .frame(width: 1, height: i % 3 == 0 ? 5 : 3)
-                    .offset(y: -18)
-                    .rotationEffect(.degrees(Double(i) * 30))
-            }
-            
-            // Notch needle indicator
-            Rectangle()
-                .fill(Color("Receipt"))
-                .frame(width: 2, height: 8)
-                .offset(y: -14)
-                .rotationEffect(.degrees(Double(value) * 45)) // -90° to +90°
+            // Icon indicating EV compensation (+/-)
+            Image(systemName: "plusminus")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(value != 0 ? Color("Brass") : Color("Receipt").opacity(0.7))
         }
-        .gesture(
-            DragGesture()
-                .onChanged { g in
-                    let delta = Float(g.translation.width / 40.0)
-                    let newEV = max(-2.0, min(2.0, delta))
-                    value = newEV
-                    onChange(newEV)
-                }
-        )
+        .onTapGesture {
+            // Tap to reset exposure to 0
+            if value != 0 {
+                value = 0
+                onChange(0)
+            }
+        }
     }
 }
 
