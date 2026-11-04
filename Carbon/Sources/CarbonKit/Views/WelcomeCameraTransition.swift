@@ -10,6 +10,7 @@ struct WelcomeCameraTransition<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var welcomeVisible: Bool
     @State private var startedAt: Date?
+    @State private var revealStartedAt: Date?
     @State private var transitioning = false
     @State private var welcomeOpacity = 1.0
     @State private var haptic = UIImpactFeedbackGenerator(style: .soft)
@@ -36,7 +37,9 @@ struct WelcomeCameraTransition<Content: View>: View {
             }
             if let startedAt, transitioning, !usesReducedMotion {
                 TimelineView(.animation(minimumInterval: 1.0 / 60)) { timeline in
-                    LightLeak(progress: min(1, timeline.date.timeIntervalSince(startedAt) / 1.16))
+                    // Hold opaque exposure until the scene swap has committed.
+                    // A cold camera must never outrun an independent wall clock.
+                    LightLeak(progress: leakProgress(at: timeline.date, since: startedAt))
                 }
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
@@ -68,24 +71,31 @@ struct WelcomeCameraTransition<Content: View>: View {
             }
         }
         .task(id: startedAt) {
-            guard startedAt != nil else { return }
+            guard let startedAt else { return }
             do {
                 if usesReducedMotion {
                     try await Task.sleep(for: .milliseconds(300))
                 } else {
-                    try await Task.sleep(for: .milliseconds(535))
+                    let untilPeak = max(0, 0.52 - Date().timeIntervalSince(startedAt))
+                    try await Task.sleep(for: .seconds(untilPeak))
                     welcomeVisible = false
                     haptic.impactOccurred(intensity: 0.65)
-                    try await Task.sleep(for: .milliseconds(625))
+                    // Let the underlying SwiftUI transaction finish while the
+                    // renderer stays on its opaque plateau, then start reveal.
+                    try await Task.sleep(for: .milliseconds(40))
+                    revealStartedAt = Date()
+                    try await Task.sleep(for: .milliseconds(600))
                 }
                 welcomeVisible = false
                 transitioning = false
-                startedAt = nil
+                self.startedAt = nil
+                revealStartedAt = nil
             } catch {
                 // Cancellation must not strand an opaque overlay or cream cover.
                 welcomeVisible = false
                 transitioning = false
-                startedAt = nil
+                self.startedAt = nil
+                revealStartedAt = nil
             }
         }
         #if DEBUG
@@ -100,6 +110,13 @@ struct WelcomeCameraTransition<Content: View>: View {
             } catch { }
         }
         #endif
+    }
+
+    private func leakProgress(at date: Date, since start: Date) -> Double {
+        if let revealStartedAt {
+            return 0.5 + min(0.5, max(0, date.timeIntervalSince(revealStartedAt)) / 1.2)
+        }
+        return min(0.5, max(0, date.timeIntervalSince(start)) / 1.04)
     }
 
     private var usesReducedMotion: Bool {

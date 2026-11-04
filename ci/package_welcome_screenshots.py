@@ -28,12 +28,17 @@ def package(source: Path, destination: Path, device: str) -> int:
                 'welcome-permission-denied', 'welcome-accessibility-xxxl'}
     if missing := required - names:
         raise ValueError(f'Missing {device} screenshots: {sorted(missing)}')
+    video = source.parent / f'Welcome-{device}.mov'
+    if video.exists():
+        shutil.copyfile(video, target / 'transition.mov')
     return len(names)
 
 
 def gallery(destination: Path) -> None:
     cards = []
     for device in ('se', 'pro-max'):
+        if (destination / device / 'transition.mov').exists():
+            cards.append(f'<figure><video controls preload="metadata" src="{device}/transition.mov"></video><figcaption>{device} / actual timed transition</figcaption></figure>')
         for image in sorted((destination / device).glob('*.png')):
             relative = image.relative_to(destination).as_posix()
             title = html.escape(f'{device} / {image.stem.removeprefix("welcome-")}')
@@ -43,7 +48,7 @@ def gallery(destination: Path) -> None:
 <title>Carbon welcome — simulator captures</title>
 <style>body{margin:32px;background:#0e0e10;color:#f6f3ec;font:16px system-ui}
 h1{font:40px Georgia}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px}
-figure{margin:0}img{width:100%;height:auto;border-radius:16px}figcaption{padding:12px 0}</style>
+figure{margin:0}img,video{width:100%;height:auto;border-radius:16px}figcaption{padding:12px 0}</style>
 <h1>Carbon welcome</h1><p>Native iOS Simulator captures: SE and Pro Max. Select a frame for its original PNG.</p>
 <main>''' + '\n'.join(cards) + '</main></html>', encoding='utf-8')
 
