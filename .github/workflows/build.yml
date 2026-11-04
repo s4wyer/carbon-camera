@@ -51,6 +51,7 @@ jobs:
             -project Carbon.xcodeproj \
             -scheme Carbon \
             -destination "$TARGET" \
+            -only-testing:CarbonKitTests \
             -derivedDataPath ./build/DerivedData \
             -enableCodeCoverage YES \
             -resultBundlePath ./build/TestResults.xcresult \
@@ -79,6 +80,10 @@ jobs:
 
           # Guard: fail if bundle resources were not copied into the app
           APP=./build/ipa/Payload/Carbon.app
+          # Keep both home-screen PNGs available for sideloading even when actool
+          # emits only the 2x fallback alongside the compiled asset catalog.
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-120.png "$APP/AppIcon60x60@2x.png"
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-180.png "$APP/AppIcon60x60@3x.png"
           test -f "$APP/Assets.car" || { echo "::error::Assets.car missing from app bundle"; exit 1; }
           HALIDE=$(find "$APP/LUTs/halide" -name '*.ccube' 2>/dev/null | wc -l | tr -d ' ')
           NOFUSION=$(find "$APP/LUTs/nofusion" -name '*.lutbin' 2>/dev/null | wc -l | tr -d ' ')
@@ -173,8 +178,6 @@ jobs:
           DEST=$(xcrun simctl list devices available | grep -E '^ +iPhone' | head -1 | sed -E 's/.*\(([0-9A-Fa-f-]{36})\).*/\1/')
           echo "Selected simulator: $DEST"
           
-          mkdir -p ./build/UIScreenshots
-          
           # Run UI tests with screenshot attachments enabled
           xcodebuild test \
             -project Carbon.xcodeproj \
@@ -182,25 +185,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$DEST" \
             -only-testing:CarbonUITests \
             -resultBundlePath ./build/UITestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO || true
-            
-          # Extract screenshots from xcresult bundle
-          python3 -c "
-import os
-import subprocess
-import json
-
-result_bundle = './build/UITestResults.xcresult'
-output_dir = '../screenshots'
-os.makedirs(output_dir, exist_ok=True)
-
-try:
-    # Export attachments using xcparse or xcresulttool
-    cmd = ['xcrun', 'xcresulttool', 'get', '--path', result_bundle, '--format', 'json']
-    print('Checking for test results...')
-except Exception as e:
-    print(f'Error extracting screenshots: {e}')
-" || true
+            CODE_SIGNING_ALLOWED=NO
       
       - name: Upload screenshots
         if: always()
@@ -225,5 +210,6 @@ except Exception as e:
           - **04-rolls.png** - Rolls/gallery screen
           - **05-settings.png** - Settings and attribution
           
-          Download the **Carbon-UI-Screenshots** artifact to view.
+          Download the **Carbon-UI-Screenshots** artifact and open `UITestResults.xcresult`
+          in Xcode to view the screenshot attachments.
           EOF
