@@ -326,17 +326,26 @@ final class CameraManager: NSObject, ObservableObject {
     }
     
     private func buildPhotoSettings() -> AVCapturePhotoSettings {
-        var settings: AVCapturePhotoSettings
-        
-        // C03A: Low-light fallback — if scene is dark and device supports Apple ProRAW,
-        // prefer ProRAW (computational processing baked in) over plain Bayer RAW
-        let isLowLight = currentSceneEV < 4.0  // ~EV 4 = dim indoor
-        let supportsProRAW = photoOutput.availableRawPhotoPixelFormatTypes.count > 0 &&
-            session.sessionPreset == .inputPriority
-        
+        Self.makePhotoSettings(
+            rawPixelFormatType: photoOutput.availableRawPhotoPixelFormatTypes.first,
+            maximumQuality: photoOutput.maxPhotoQualityPrioritization,
+            flashMode: activeFlashMode,
+            supportedFlashModes: photoOutput.supportedFlashModes
+        )
+    }
+
+    // Keep settings construction independent of camera hardware so the RAW and
+    // processed-only paths can both be exercised by simulator regression tests.
+    nonisolated static func makePhotoSettings(
+        rawPixelFormatType: OSType?,
+        maximumQuality: AVCapturePhotoOutput.QualityPrioritization,
+        flashMode: AVCaptureDevice.FlashMode,
+        supportedFlashModes: [AVCaptureDevice.FlashMode]
+    ) -> AVCapturePhotoSettings {
+        let settings: AVCapturePhotoSettings
+
         // Priority: RAW + HEVC pair (D-002)
-        if photoOutput.availableRawPhotoPixelFormatTypes.count > 0,
-           let rawFormat = photoOutput.availableRawPhotoPixelFormatTypes.first {
+        if let rawFormat = rawPixelFormatType {
             settings = AVCapturePhotoSettings(
                 rawPixelFormatType: rawFormat,
                 processedFormat: [
@@ -346,10 +355,6 @@ final class CameraManager: NSObject, ObservableObject {
                     ]
                 ]
             )
-
-            // C03A: Low light — photoQualityPrioritization .quality (below) enables
-            // the system's low-light capture path automatically on supported devices.
-            _ = isLowLight
         } else {
             // Fallback: HEVC only
             settings = AVCapturePhotoSettings(format: [
@@ -361,11 +366,16 @@ final class CameraManager: NSObject, ObservableObject {
         }
         
         // Flash
-        if photoOutput.supportedFlashModes.contains(activeFlashMode) {
-            settings.flashMode = activeFlashMode
+        if supportedFlashModes.contains(flashMode) {
+            settings.flashMode = flashMode
         }
         
-        settings.photoQualityPrioritization = .quality
+        // AVFoundation raises an Objective-C exception if Bayer RAW requests
+        // balanced/quality processing, even when paired with a processed photo.
+        // ProRAW and processed-only captures may use the output's quality limit.
+        settings.photoQualityPrioritization = AVCapturePhotoOutput.isBayerRAWPixelFormat(
+            settings.rawPhotoPixelFormatType
+        ) ? .speed : maximumQuality
         return settings
     }
     
