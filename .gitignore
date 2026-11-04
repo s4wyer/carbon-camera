@@ -1,2 +1,4 @@
 *.log
 j.json
+.tmp/
+__pycache__/

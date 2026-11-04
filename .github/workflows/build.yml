@@ -58,6 +58,7 @@ jobs:
           
       - name: Build and archive IPA
         run: |
+          set -euo pipefail
           cd Carbon
           
           # Create the Xcode archive
@@ -73,18 +74,24 @@ jobs:
             DEVELOPMENT_TEAM=""
             
           # Package the unsigned app
-          mkdir -p ./build/Payload
-          cp -R ./build/Carbon.xcarchive/Products/Applications/Carbon.app ./build/Payload/
+          mkdir -p ./build/ipa/Payload
+          ditto ./build/Carbon.xcarchive/Products/Applications/Carbon.app ./build/ipa/Payload/Carbon.app
 
           # Guard: fail if bundle resources were not copied into the app
-          APP=./build/Payload/Carbon.app
+          APP=./build/ipa/Payload/Carbon.app
           test -f "$APP/Assets.car" || { echo "::error::Assets.car missing from app bundle"; exit 1; }
           HALIDE=$(find "$APP/LUTs/halide" -name '*.ccube' 2>/dev/null | wc -l | tr -d ' ')
           NOFUSION=$(find "$APP/LUTs/nofusion" -name '*.lutbin' 2>/dev/null | wc -l | tr -d ' ')
           echo "Bundled LUTs: halide=$HALIDE nofusion=$NOFUSION"
           [ "$HALIDE" -eq 24 ] && [ "$NOFUSION" -eq 20 ] || { echo "::error::LUTs missing from app bundle"; exit 1; }
           du -sh "$APP"
-          (cd build && /usr/bin/ditto -c -k --keepParent Payload Carbon-unsigned.ipa)
+          # A conventional ZIP with Payload at its root, with no AppleDouble data.
+          (cd build/ipa && COPYFILE_DISABLE=1 /usr/bin/zip -qry -X ../Carbon-unsigned.ipa Payload)
+
+      - name: Validate packaged IPA
+        run: |
+          swift ci/check_bundle.swift Carbon/build/ipa/Payload/Carbon.app
+          python3 ci/check_ipa.py Carbon/build/Carbon-unsigned.ipa
             
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -93,6 +100,16 @@ jobs:
           path: Carbon/build/*.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: Explain IPA download
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### Import into Feather
+          Download the **Carbon-unsigned.ipa** artifact below, then **extract the downloaded ZIP**.
+          Import the **Carbon-unsigned.ipa inside it** into Feather and sign with your certificate.
+          Do not rename the GitHub artifact ZIP to `.ipa`: that ZIP contains the IPA, not `Payload/`.
+          The IPA has passed archive, bundle metadata, ARM64 iOS executable, icon, and resource checks.
+          EOF
           
       - name: Upload test results
         if: always()
@@ -118,6 +135,7 @@ jobs:
 
       - name: Run pipeline verification
         run: |
+          python -m unittest discover -s ci -p 'test_*.py'
           python verify_pipeline.py
           
       - name: Check asset integrity

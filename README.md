@@ -90,6 +90,21 @@ Where the three reference documents disagree, the decision is recorded in `docs/
 
 ## Next steps (when on Mac)
 
+### Importing a CI build into Feather
+
+Download **Carbon-unsigned.ipa** from the artifacts of a successful
+[Build Carbon IPA run](https://github.com/s4wyer/carbon-camera/actions/workflows/build.yml).
+GitHub downloads artifacts as ZIP files: extract that ZIP and import the
+**Carbon-unsigned.ipa inside it** into Feather. Renaming the downloaded ZIP to
+`.ipa` does not work because its root contains another archive instead of `Payload/`.
+Sign the imported app in Feather with your certificate before installing.
+The app requires iOS 18.0 or later.
+
+CI validates the finished IPA's ZIP structure, bundle metadata, ARM64 device
+executable, primary icon PNGs, and bundled resources before uploading it.
+
+### Building locally
+
 1. Transfer this repository to Mac with Xcode 16+.
 2. In `Carbon/`, run `xcodegen generate` (install XcodeGen with `brew install xcodegen`).
 3. Run `xcodebuild test -project Carbon.xcodeproj -scheme Carbon -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO` to validate contract serialization and pipeline math. Choose an installed iPhone simulator if that device is unavailable. Plain `swift test` targets the macOS host and cannot compile the iOS camera/UI code.
