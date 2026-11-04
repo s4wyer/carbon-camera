@@ -11,6 +11,7 @@ struct CameraView: View {
     @StateObject private var cameraManager = CameraManager()
     @StateObject private var volumeObserver = VolumeButtonObserver()
     @StateObject private var levelDetector = LevelDetector()
+    @Environment(\.openURL) private var openURL
     
     // UI state
     @State private var selectedFocal: Double = 35.0
@@ -83,6 +84,26 @@ struct CameraView: View {
                 // Viewfinder area (dominant photographic center)
                 ZStack {
                     CameraPreviewView(session: cameraManager.session)
+                        .overlay {
+                            if !SampleShotFixture.isEnabled,
+                               coordinator.cameraPermissionStatus == .denied || coordinator.cameraPermissionStatus == .restricted {
+                                VStack(spacing: 12) {
+                                    Text("Camera access is off").font(.headline)
+                                    Text("Allow camera access in Settings to take photographs.")
+                                        .font(.body)
+                                        .multilineTextAlignment(.center)
+                                    if coordinator.cameraPermissionStatus == .denied {
+                                        Button("Open Settings") {
+                                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                                        }
+                                        .font(.headline)
+                                        .tint(Color("Receipt"))
+                                    }
+                                }
+                                .foregroundStyle(Color("Receipt"))
+                                .padding(24)
+                            }
+                        }
                         .overlay {
                             if SampleShotFixture.isEnabled,
                                let url = SampleShotFixture.imageURL,
@@ -224,7 +245,7 @@ struct CameraView: View {
             lastShotThumbnail = await PhotoThumbnailCache.shared.thumbnail(for: shot)
         }
         .onAppear {
-            if !SampleShotFixture.isEnabled {
+            if !SampleShotFixture.isEnabled, coordinator.cameraPermissionStatus == .authorized {
                 cameraManager.startSession()
             }
             volumeObserver.onShutterPress = { triggerShutter() }
@@ -235,6 +256,11 @@ struct CameraView: View {
             cameraManager.stopSession()
             volumeObserver.stop()
             levelDetector.stop()
+        }
+        .onChange(of: coordinator.cameraPermissionStatus) { _, status in
+            if status == .authorized, !SampleShotFixture.isEnabled {
+                cameraManager.startSession()
+            }
         }
         .sheet(isPresented: $showPresetMenu) {
             PresetBrowserView(

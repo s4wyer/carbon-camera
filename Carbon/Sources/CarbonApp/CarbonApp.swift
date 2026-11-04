@@ -26,9 +26,10 @@ struct CarbonApp: App {
                             }
                     }
                 } else {
+                    WelcomeCameraTransition(coordinator: coordinator) {
                     switch coordinator.currentScreen {
                     case .welcome:
-                        WelcomeView(coordinator: coordinator)
+                        Color("Remjet").ignoresSafeArea()
                     case .camera:
                         CameraView(coordinator: coordinator)
                     case .rolls:
@@ -37,6 +38,7 @@ struct CarbonApp: App {
                         LibraryView(coordinator: coordinator)
                     case .lab:
                         LabView(coordinator: coordinator)
+                    }
                     }
                 }
             }
