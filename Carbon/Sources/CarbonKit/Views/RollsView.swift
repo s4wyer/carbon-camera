@@ -1,5 +1,5 @@
 // L04, G01 — Rolls as albums: named envelopes of shots with contact sheets
-// Design: carbon-build-plan §3 "Rolls and darkroom" — cream canvas, tactile envelopes,
+// Design: darkroom palette matching the camera — charcoal canvas, tactile envelopes,
 // real photograph peeking out, thin processing strip, Tear open / Open roll.
 
 import SwiftUI
@@ -16,40 +16,19 @@ struct RollsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Receipt").ignoresSafeArea()
+                Color("Remjet").ignoresSafeArea()
                 
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20) {
-                        // Header
-                        HStack {
-                            Text("carbon")
-                                .font(.system(size: 20, weight: .regular, design: .serif))
-                                .foregroundColor(Color("Remjet"))
-                            Spacer()
-                            Button {
-                                rollStore.newRoll()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 11, weight: .bold))
-                                    Text("New roll")
-                                        .font(.system(size: 13, weight: .medium))
-                                }
-                                .foregroundColor(Color("CarbonInk"))
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 14)
-                        
                         // Title
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Rolls")
                                 .font(.system(size: 38, weight: .regular, design: .serif))
-                                .foregroundColor(Color("Remjet"))
+                                .foregroundColor(Color("Receipt"))
                             if let active = rollStore.activeRoll {
                                 Text("Shooting · \(active.name) · \(active.frameCount) frames")
                                     .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(Color("SecondaryInk"))
+                                    .foregroundColor(Color("Receipt").opacity(0.65))
                             }
                         }
                         .padding(.horizontal, 24)
@@ -67,16 +46,16 @@ struct RollsView: View {
                                         .foregroundColor(Color("Safelight"))
                                     Text(summary)
                                         .font(.system(size: 12))
-                                        .foregroundColor(Color("Remjet"))
+                                        .foregroundColor(Color("Receipt"))
                                         .multilineTextAlignment(.leading)
                                     Spacer()
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(Color("SecondaryInk"))
+                                        .foregroundColor(Color("Receipt").opacity(0.65))
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                                .background(Color("Receipt").opacity(0.9))
+                                .background(Color("Receipt").opacity(0.06))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
                                         .stroke(Color("Safelight").opacity(0.4), lineWidth: 0.5)
@@ -105,6 +84,9 @@ struct RollsView: View {
                     .padding(.bottom, 24)
                 }
             }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                header
+            }
             .toolbar(.hidden, for: .navigationBar)
         }
         .task {
@@ -122,28 +104,58 @@ struct RollsView: View {
                 shots: library.shots(for: roll)
             )
         }
+        .preferredColorScheme(.dark)
     }
     
+    private var header: some View {
+        HStack {
+            Button {
+                coordinator.navigateTo(.camera)
+            } label: {
+                Label("Camera", systemImage: "chevron.left")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Color("Receipt"))
+                    .frame(minHeight: 44)
+            }
+            Spacer()
+            Button {
+                rollStore.newRoll()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("New roll")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(Color("Brass"))
+                .frame(minHeight: 44)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 6)
+        .background(Color("Remjet"))
+    }
+
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "film")
                 .font(.system(size: 44, weight: .light))
-                .foregroundColor(Color("SecondaryInk").opacity(0.35))
+                .foregroundColor(Color("Receipt").opacity(0.4))
             Text("No rolls yet")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(Color("SecondaryInk"))
+                .foregroundColor(Color("Receipt").opacity(0.65))
             Text("Load the camera and take your first frame.")
                 .font(.system(size: 13))
-                .foregroundColor(Color("SecondaryInk").opacity(0.7))
+                .foregroundColor(Color("Receipt").opacity(0.6))
                 .multilineTextAlignment(.center)
             Button("Open camera") {
                 coordinator.navigateTo(.camera)
             }
             .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.white)
+            .foregroundColor(Color("Remjet"))
             .padding(.horizontal, 20)
             .padding(.vertical, 11)
-            .background(Color("CarbonInk"))
+            .background(Color("Brass"))
             .clipShape(Capsule())
         }
         .frame(maxWidth: .infinity)
@@ -170,18 +182,18 @@ private struct RollEnvelopeCard: View {
                     Text(roll.state == .shooting ? "SHOOTING" : roll.state.rawValue.uppercased())
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .tracking(1.2)
-                        .foregroundColor(roll.state == .shooting ? Color("Safelight") : Color("CarbonInk"))
+                        .foregroundColor(roll.state == .shooting ? Color("Safelight") : Color("Brass"))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .overlay(
                             RoundedRectangle(cornerRadius: 2)
-                                .stroke(roll.state == .shooting ? Color("Safelight") : Color("CarbonInk"), lineWidth: 1)
+                                .stroke(roll.state == .shooting ? Color("Safelight") : Color("Brass"), lineWidth: 1)
                         )
                     Spacer()
                     Text("\(roll.frameCount) FRAMES")
                         .font(.system(size: 9, weight: .medium, design: .monospaced))
                         .tracking(1.0)
-                        .foregroundColor(Color("SecondaryInk"))
+                        .foregroundColor(Color("Receipt").opacity(0.65))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
@@ -191,10 +203,10 @@ private struct RollEnvelopeCard: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(roll.name)
                             .font(.system(size: 17, weight: .semibold, design: .serif))
-                            .foregroundColor(Color("Remjet"))
+                            .foregroundColor(Color("Receipt"))
                         Text(roll.createdAt.formatted(date: .abbreviated, time: .shortened))
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(Color("SecondaryInk"))
+                            .foregroundColor(Color("Receipt").opacity(0.65))
                     }
                     Spacer()
                     
@@ -205,7 +217,7 @@ private struct RollEnvelopeCard: View {
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 54, height: 54)
                             .clipShape(RoundedRectangle(cornerRadius: 3))
-                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color("Remjet").opacity(0.15)))
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color("Receipt").opacity(0.15)))
                             .rotationEffect(.degrees(2))
                             .offset(y: -2)
                     }
@@ -238,22 +250,22 @@ private struct RollEnvelopeCard: View {
                     Spacer()
                     Text(roll.state == .ready ? "Open roll" : "View roll")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color("CarbonInk"))
+                        .foregroundColor(Color("Brass"))
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(Color("CarbonInk"))
+                        .foregroundColor(Color("Brass"))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
             }
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color("Receipt").opacity(0.6))
-                    .shadow(color: Color("Remjet").opacity(0.08), radius: 6, y: 2)
+                    .fill(Color("Receipt").opacity(0.06))
+                    .shadow(color: Color.black.opacity(0.2), radius: 6, y: 2)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color("SecondaryInk").opacity(0.18), lineWidth: 0.5)
+                    .stroke(Color("Receipt").opacity(0.12), lineWidth: 0.5)
             )
         }
         .buttonStyle(.plain)
@@ -275,7 +287,7 @@ private struct RollEnvelopeCard: View {
                 if shots.count > 12 {
                     Text("+\(shots.count - 12)")
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(Color("SecondaryInk"))
+                        .foregroundColor(Color("Receipt").opacity(0.65))
                         .padding(.leading, 4)
                 }
             }
@@ -365,10 +377,12 @@ struct RollDetailView: View {
             }
             .toolbarBackground(Color("Remjet"), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .fullScreenCover(item: $selectedShot) { shot in
             PhotoDetailView(shot: shot)
         }
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -411,10 +425,11 @@ private struct RecoverySheet: View {
                         ForEach(report.recoverable) { rec in
                             recoveryRow(rec)
                         }
+                        .listRowBackground(Color("Receipt").opacity(0.06))
                     } header: {
                         Text("Recovered — \(report.recoverable.count) photo\(report.recoverable.count == 1 ? "" : "s")")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundColor(Color("CarbonInk"))
+                            .foregroundColor(Color("Brass"))
                     }
                 }
                 
@@ -423,6 +438,7 @@ private struct RecoverySheet: View {
                         ForEach(report.interrupted) { rec in
                             recoveryRow(rec)
                         }
+                        .listRowBackground(Color("Receipt").opacity(0.06))
                     } header: {
                         Text("Interrupted — tap to finish")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -440,7 +456,7 @@ private struct RecoverySheet: View {
                                         .foregroundColor(Color("Safelight"))
                                     Text(rec.captureID.prefix(8) + "…")
                                         .font(.system(size: 12, design: .monospaced))
-                                        .foregroundColor(Color("SecondaryInk"))
+                                        .foregroundColor(Color("Receipt").opacity(0.65))
                                     Spacer()
                                     Text(rec.state.displayName)
                                         .font(.system(size: 11, weight: .semibold))
@@ -448,9 +464,10 @@ private struct RecoverySheet: View {
                                 }
                                 Text(rec.timestamp.formatted(date: .abbreviated, time: .shortened))
                                     .font(.system(size: 10, design: .monospaced))
-                                    .foregroundColor(Color("SecondaryInk").opacity(0.7))
+                                    .foregroundColor(Color("Receipt").opacity(0.6))
                             }
                         }
+                        .listRowBackground(Color("Receipt").opacity(0.06))
                     } header: {
                         Text("Unrecoverable")
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -458,10 +475,12 @@ private struct RecoverySheet: View {
                     } footer: {
                         Text("Originals were lost or corrupted by the system or another app. We kept the journal record for your records.")
                             .font(.caption2)
-                            .foregroundColor(Color("SecondaryInk"))
+                            .foregroundColor(Color("Receipt").opacity(0.65))
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color("Remjet"))
             .navigationTitle("Recovery")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -470,7 +489,12 @@ private struct RecoverySheet: View {
                         .fontWeight(.semibold)
                 }
             }
+            .toolbarBackground(Color("Remjet"), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .tint(Color("Brass"))
         }
+        .preferredColorScheme(.dark)
         .presentationDetents([.medium, .large])
     }
     
@@ -479,19 +503,19 @@ private struct RecoverySheet: View {
         HStack {
             Image(systemName: rec.state == .intact ? "checkmark.seal" : "checkmark.seal.fill")
                 .font(.system(size: 12))
-                .foregroundColor(Color("CarbonInk"))
+                .foregroundColor(Color("Brass"))
             VStack(alignment: .leading, spacing: 2) {
                 Text(rec.captureID.prefix(8) + "…")
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(Color("Remjet"))
+                    .foregroundColor(Color("Receipt"))
                 Text(rec.timestamp.formatted(date: .abbreviated, time: .shortened))
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(Color("SecondaryInk"))
+                    .foregroundColor(Color("Receipt").opacity(0.65))
             }
             Spacer()
             Text(rec.state.displayName)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color("SecondaryInk"))
+                .foregroundColor(Color("Receipt").opacity(0.65))
         }
     }
 }
