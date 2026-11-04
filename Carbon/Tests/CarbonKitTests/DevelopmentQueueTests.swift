@@ -125,7 +125,11 @@ final class DevelopmentQueueTests: XCTestCase {
     }
 
     private func waitUntilIdle(_ queue: DevelopmentQueue) async throws {
-        for _ in 0..<200 {
+        // Simulator scheduling on shared CI hosts can exceed two seconds even
+        // for these short workers. Bound the wait with a monotonic deadline.
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(30))
+        while clock.now < deadline {
             if !queue.isProcessing { return }
             try await Task.sleep(nanoseconds: 10_000_000)
         }
