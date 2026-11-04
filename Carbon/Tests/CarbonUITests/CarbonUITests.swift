@@ -6,6 +6,7 @@ final class CarbonUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        app.resetAuthorizationStatus(for: .camera)
         
         // Enable sample shot mode for testing
         app.launchArguments = ["--ui-testing", "--insert-sample-shot"]
@@ -13,11 +14,9 @@ final class CarbonUITests: XCTestCase {
     }
     
     func testCaptureAllScreens() throws {
-        let screenshotDir = "screenshots"
-        
         // Wait for welcome screen
-        let openCameraButton = app.buttons["Open Camera"]
-        XCTAssertTrue(openCameraButton.waitForExistence(timeout: 5))
+        let openCameraButton = app.buttons["Open camera"]
+        XCTAssertTrue(openCameraButton.waitForExistence(timeout: 15))
         
         // Screenshot 1: Welcome
         let welcome = app.screenshot()
@@ -28,7 +27,22 @@ final class CarbonUITests: XCTestCase {
         
         // Navigate to camera
         openCameraButton.tap()
-        sleep(2)
+        let continueButton = app.buttons["Allow camera & continue"]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 5))
+        continueButton.tap()
+
+        let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        if permissionAlert.waitForExistence(timeout: 5) {
+            let allowButton = permissionAlert.buttons["Allow"]
+            if allowButton.exists {
+                allowButton.tap()
+            } else {
+                permissionAlert.buttons["OK"].tap()
+            }
+        }
+
+        let presetName = app.buttons["preset-name-button"]
+        XCTAssertTrue(presetName.waitForExistence(timeout: 15))
         
         // Screenshot 2: Camera viewfinder
         let camera = app.screenshot()
@@ -38,8 +52,7 @@ final class CarbonUITests: XCTestCase {
         add(cameraAttachment)
         
         // Tap preset name to open menu
-        let presetName = app.staticTexts.matching(identifier: "preset-name-button").firstMatch
-        if presetName.exists {
+        do {
             presetName.tap()
             sleep(1)
             
@@ -57,7 +70,8 @@ final class CarbonUITests: XCTestCase {
         
         // Navigate to rolls screen
         let rollsButton = app.buttons.matching(identifier: "rolls-button").firstMatch
-        if rollsButton.exists {
+        XCTAssertTrue(rollsButton.waitForExistence(timeout: 5))
+        do {
             rollsButton.tap()
             sleep(2)
             
@@ -69,15 +83,16 @@ final class CarbonUITests: XCTestCase {
             add(rollsAttachment)
             
             // Go back to camera
-            if app.buttons["Back to Camera"].exists {
-                app.buttons["Back to Camera"].tap()
-                sleep(1)
-            }
+            let cameraButton = app.buttons["Camera"]
+            XCTAssertTrue(cameraButton.waitForExistence(timeout: 5))
+            cameraButton.tap()
+            sleep(1)
         }
         
         // Open settings
         let settingsButton = app.buttons.matching(identifier: "settings-button").firstMatch
-        if settingsButton.exists {
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        do {
             settingsButton.tap()
             sleep(1)
             
