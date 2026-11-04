@@ -7,7 +7,7 @@ import CoreImage
 struct LabView: View {
     @ObservedObject var coordinator: AppCoordinator
     @State private var selectedShot: Shot?
-    @StateObject private var store = LibraryStore()
+    @ObservedObject private var store = LibraryStore.shared
     
     var body: some View {
         ZStack {
@@ -46,23 +46,8 @@ struct LabView: View {
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                             ForEach(store.shots) { shot in
-                                if let thumb = PhotoThumbnailCache.shared.thumbnail(for: shot) {
-                                    Image(uiImage: thumb)
-                                        .resizable()
-                                        .aspectRatio(1, contentMode: .fill)
-                                        .clipped()
-                                        .cornerRadius(6)
-                                        .onTapGesture {
-                                            selectedShot = shot
-                                        }
-                                } else {
-                                    Rectangle()
-                                        .fill(Color("Remjet").opacity(0.1))
-                                        .cornerRadius(6)
-                                        .overlay(
-                                            ProgressView()
-                                                .tint(Color("SecondaryInk"))
-                                        )
+                                LabThumbnailCell(shot: shot) {
+                                    selectedShot = shot
                                 }
                             }
                         }
@@ -124,6 +109,33 @@ struct LabView: View {
     }
 }
 
+private struct LabThumbnailCell: View {
+    let shot: Shot
+    let onTap: () -> Void
+    @State private var thumbnail: UIImage?
+
+    var body: some View {
+        Group {
+            if let thumbnail {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(1, contentMode: .fill)
+                    .clipped()
+                    .cornerRadius(6)
+                    .onTapGesture(perform: onTap)
+            } else {
+                Rectangle()
+                    .fill(Color("Remjet").opacity(0.1))
+                    .cornerRadius(6)
+                    .overlay(ProgressView().tint(Color("SecondaryInk")))
+            }
+        }
+        .task {
+            thumbnail = await PhotoThumbnailCache.shared.thumbnail(for: shot)
+        }
+    }
+}
+
 /// L05: Per-photo Lab editor — edit preset and sliders
 struct LabEditorView: View {
     let shot: Shot
@@ -144,8 +156,7 @@ struct LabEditorView: View {
                 // Thumbnail
                 if let url = shot.sources.first?.mediaURL,
                    let ciImage = CIImage(contentsOf: url) {
-                    let context = CIContext()
-                    if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
+                    if let cgImage = CIContextProvider.shared.createCGImage(ciImage, from: ciImage.extent) {
                         Image(uiImage: UIImage(cgImage: cgImage))
                             .resizable()
                             .aspectRatio(contentMode: .fit)

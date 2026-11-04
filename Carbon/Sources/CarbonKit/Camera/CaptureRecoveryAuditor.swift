@@ -215,8 +215,19 @@ public actor CaptureRecoveryAuditor {
             // No hash recorded — file exists, cannot prove integrity.
             return .ok
         }
-        guard let data = try? Data(contentsOf: url) else { return .mismatch }
-        let digest = SHA256.hash(data: data).compactMap { String(format: "%02x", $0) }.joined()
-        return digest == expectedHash ? .ok : .mismatch
+
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+
+            var hasher = SHA256()
+            while let chunk = try handle.read(upToCount: 1024 * 1024), !chunk.isEmpty {
+                hasher.update(data: chunk)
+            }
+            let digest = hasher.finalize().compactMap { String(format: "%02x", $0) }.joined()
+            return digest == expectedHash ? .ok : .mismatch
+        } catch {
+            return .mismatch
+        }
     }
 }

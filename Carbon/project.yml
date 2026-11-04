@@ -27,10 +27,13 @@ targets:
     sources:
       - path: Sources/CarbonApp
       - path: Sources/CarbonKit
-    resources:
+      # NOTE: XcodeGen has no target-level `resources:` key (it is silently
+      # ignored). Resources must be listed under `sources:` so they land in the
+      # Copy Bundle Resources phase.
       - path: Resources/Assets.xcassets
       - path: Resources/LUTs
         type: folder
+        buildPhase: resources
     info:
       path: Sources/CarbonApp/Info.plist
       properties:

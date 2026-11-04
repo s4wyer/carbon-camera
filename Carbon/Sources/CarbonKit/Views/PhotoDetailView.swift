@@ -126,8 +126,7 @@ struct PhotoDetailView: View {
             // Load full-resolution image
             if let url = shot.sources.first?.mediaURL,
                let ciImage = CIImage(contentsOf: url) {
-                let context = CIContext()
-                if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
+                if let cgImage = CIContextProvider.shared.createCGImage(ciImage, from: ciImage.extent) {
                     fullImage = UIImage(cgImage: cgImage)
                 }
             }

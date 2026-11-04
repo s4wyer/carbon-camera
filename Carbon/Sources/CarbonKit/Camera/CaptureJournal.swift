@@ -7,6 +7,10 @@ import Foundation
 import CryptoKit
 import os.log
 
+public extension Notification.Name {
+    static let carbonCapturePersisted = Notification.Name("app.carbon.capturePersisted")
+}
+
 /// Durable capture entry on disk
 public struct JournalEntry: Codable, Identifiable {
     public let id: UUID
@@ -107,6 +111,7 @@ public actor CaptureJournal {
         )
         
         try appendToJournal(entry: entry)
+        NotificationCenter.default.post(name: .carbonCapturePersisted, object: nil)
         logger.info("Persisted capture \(captureID) with raw=\(rawName ?? "nil"), hevc=\(hevcName ?? "nil")")
         return entry
     }

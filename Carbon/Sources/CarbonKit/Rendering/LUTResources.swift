@@ -32,9 +32,15 @@ public class LUTResources {
     /// Preload all LUTs at launch (optional, for faster first render).
     public func preloadAll() {
         queue.async {
+            var loadedIDs = Set<String>()
             for preset in PresetLibrary.all {
-                guard let lutID = preset.baseParameters.lutID, !lutID.isEmpty else { continue }
-                _ = try? self.loadFromBundle(lutID: lutID)
+                guard let lutID = preset.baseParameters.lutID,
+                      !lutID.isEmpty,
+                      loadedIDs.insert(lutID).inserted,
+                      self.cache[lutID] == nil else { continue }
+                if let lut = try? self.loadFromBundle(lutID: lutID) {
+                    self.cache[lutID] = lut
+                }
             }
         }
     }

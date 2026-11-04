@@ -8,7 +8,7 @@ import CoreImage
 struct RollsView: View {
     @ObservedObject var coordinator: AppCoordinator
     @ObservedObject private var rollStore = RollStore.shared
-    @StateObject private var library = LibraryStore()
+    @ObservedObject private var library = LibraryStore.shared
     @State private var openedRoll: Roll?
     @State private var recoveryReport: RecoveryReport?
     @State private var showRecoverySheet = false
@@ -260,7 +260,7 @@ private struct RollEnvelopeCard: View {
         .task {
             if let coverID = roll.coverShotID ?? shots.first?.id,
                let shot = shots.first(where: { $0.id == coverID }) {
-                coverImage = PhotoThumbnailCache.shared.thumbnail(for: shot)
+                coverImage = await PhotoThumbnailCache.shared.thumbnail(for: shot)
             }
         }
     }
@@ -306,7 +306,7 @@ private struct FilmFrame: View {
         }
         .frame(width: 40, height: 40)
         .task {
-            image = PhotoThumbnailCache.shared.thumbnail(for: shot)
+            image = await PhotoThumbnailCache.shared.thumbnail(for: shot)
         }
     }
 }
@@ -393,7 +393,7 @@ private struct FilmContactCell: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .task {
-            image = PhotoThumbnailCache.shared.thumbnail(for: shot)
+            image = await PhotoThumbnailCache.shared.thumbnail(for: shot)
         }
     }
 }

@@ -7,7 +7,7 @@ import CoreImage
 /// 03 LIBRARY: Chronological photographic grid with All, Picks, Spaces views
 struct LibraryView: View {
     @ObservedObject var coordinator: AppCoordinator
-    @StateObject private var store = LibraryStore()
+    @ObservedObject private var store = LibraryStore.shared
     @State private var activeTab: LibraryTab = .all
     @State private var isSelectMode: Bool = false
     @State private var selectedShots: Set<UUID> = []
@@ -161,17 +161,7 @@ struct LibraryView: View {
     // MARK: - Helpers
     
     private var filteredSections: [DaySection] {
-        switch activeTab {
-        case .all:
-            return store.sections
-        case .picks:
-            return store.sections.compactMap { sec in
-                let picks = sec.shots.filter { store.isPick($0.id) }
-                return picks.isEmpty ? nil : DaySection(title: sec.title, shots: picks)
-            }
-        case .spaces:
-            return [] // Spaces unshared by default (P3)
-        }
+        store.sections(for: activeTab)
     }
     
     @ViewBuilder
@@ -233,7 +223,7 @@ private struct PhotoCard: View {
             .aspectRatio(1.0, contentMode: .fit)
             .cornerRadius(4)
             .task {
-                thumbnail = PhotoThumbnailCache.shared.thumbnail(for: shot)
+                thumbnail = await PhotoThumbnailCache.shared.thumbnail(for: shot)
             }
             .onTapGesture {
                 if !isSelectMode {
@@ -274,18 +264,50 @@ private struct PhotoCard: View {
 
 @MainActor
 final class LibraryStore: ObservableObject {
+    static let shared = LibraryStore()
+
     @Published var sections: [DaySection] = []
     @Published var pickIDs: Set<UUID> = []
-    
-    var shots: [Shot] { sections.flatMap(\.shots) }
-    
-    /// Shots belonging to a specific roll, in capture order
-    func shots(for roll: Roll) -> [Shot] {
-        let byID = Dictionary(uniqueKeysWithValues: shots.map { ($0.id, $0) })
-        return roll.shotIDs.compactMap { byID[$0] }
+
+    private var shotIndex: [UUID: Shot] = [:]
+    private var allShotsCache: [Shot] = []
+    private var hasLoaded = false
+    private var isLoading = false
+    private var picksSectionsCache: [DaySection]?
+    private var captureObserver: NSObjectProtocol?
+
+    private init() {
+        captureObserver = NotificationCenter.default.addObserver(
+            forName: .carbonCapturePersisted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.hasLoaded = false
+            Task { @MainActor in
+                await self.loadJournal(force: true)
+            }
+        }
     }
-    
-    func loadJournal() async {
+
+    deinit {
+        if let captureObserver {
+            NotificationCenter.default.removeObserver(captureObserver)
+        }
+    }
+
+    var shots: [Shot] { allShotsCache }
+
+    /// Shots belonging to a specific roll, in capture order.
+    func shots(for roll: Roll) -> [Shot] {
+        roll.shotIDs.compactMap { shotIndex[$0] }
+    }
+
+    func loadJournal(force: Bool = false) async {
+        guard (force || !hasLoaded), !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+
         do {
             let entries = try await CaptureJournal.shared.recoverAll()
             var shots: [Shot] = []
@@ -343,6 +365,10 @@ final class LibraryStore: ObservableObject {
             
             // Group by calendar day (Today, Yesterday, Date)
             self.sections = groupShotsByDay(shots)
+            allShotsCache = self.sections.flatMap(\.shots)
+            shotIndex = Dictionary(uniqueKeysWithValues: allShotsCache.map { ($0.id, $0) })
+            picksSectionsCache = nil
+            hasLoaded = true
         } catch {
             print("Failed to load captures: \(error)")
         }
@@ -351,13 +377,37 @@ final class LibraryStore: ObservableObject {
     func isPick(_ id: UUID) -> Bool {
         pickIDs.contains(id)
     }
+
+    func sections(for tab: LibraryView.LibraryTab) -> [DaySection] {
+        switch tab {
+        case .all:
+            return sections
+        case .spaces:
+            return []
+        case .picks:
+            if let picksSectionsCache {
+                return picksSectionsCache
+            }
+            let filtered = sections.compactMap { section in
+                let picks = section.shots.filter { pickIDs.contains($0.id) }
+                return picks.isEmpty ? nil : DaySection(title: section.title, shots: picks)
+            }
+            picksSectionsCache = filtered
+            return filtered
+        }
+    }
     
+    func refresh() {
+        Task { await loadJournal(force: true) }
+    }
+
     func togglePick(shotID: UUID) {
         if pickIDs.contains(shotID) {
             pickIDs.remove(shotID)
         } else {
             pickIDs.insert(shotID)
         }
+        picksSectionsCache = nil
     }
     
     private func groupShotsByDay(_ shots: [Shot]) -> [DaySection] {
@@ -366,7 +416,9 @@ final class LibraryStore: ObservableObject {
         
         var groups: [String: [Shot]] = [:]
         var order: [String] = []
-        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+
         for shot in sorted {
             let title: String
             if calendar.isDateInToday(shot.timestamp) {
@@ -374,9 +426,7 @@ final class LibraryStore: ObservableObject {
             } else if calendar.isDateInYesterday(shot.timestamp) {
                 title = "Yesterday"
             } else {
-                let fmt = DateFormatter()
-                fmt.dateStyle = .medium
-                title = fmt.string(from: shot.timestamp)
+                title = formatter.string(from: shot.timestamp)
             }
             
             if groups[title] == nil {
@@ -391,7 +441,13 @@ final class LibraryStore: ObservableObject {
 }
 
 struct DaySection: Identifiable {
-    let id = UUID()
+    let id: String
     let title: String
     let shots: [Shot]
+
+    init(title: String, shots: [Shot]) {
+        self.id = title
+        self.title = title
+        self.shots = shots
+    }
 }

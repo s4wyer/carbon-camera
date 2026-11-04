@@ -21,7 +21,7 @@ public enum LUTFormat {
 public struct LUTData {
     public let dimension: Int
     public let rgba: [Float]  // dimension³ * 4 floats (R,G,B,A per texel)
-    
+
     public init(dimension: Int, rgba: [Float]) {
         precondition(rgba.count == dimension * dimension * dimension * 4,
                      "LUT data must be dimension³ * 4 RGBA floats")

@@ -75,6 +75,15 @@ jobs:
           # Package the unsigned app
           mkdir -p ./build/Payload
           cp -R ./build/Carbon.xcarchive/Products/Applications/Carbon.app ./build/Payload/
+
+          # Guard: fail if bundle resources were not copied into the app
+          APP=./build/Payload/Carbon.app
+          test -f "$APP/Assets.car" || { echo "::error::Assets.car missing from app bundle"; exit 1; }
+          HALIDE=$(find "$APP/LUTs/halide" -name '*.ccube' 2>/dev/null | wc -l | tr -d ' ')
+          NOFUSION=$(find "$APP/LUTs/nofusion" -name '*.lutbin' 2>/dev/null | wc -l | tr -d ' ')
+          echo "Bundled LUTs: halide=$HALIDE nofusion=$NOFUSION"
+          [ "$HALIDE" -eq 24 ] && [ "$NOFUSION" -eq 20 ] || { echo "::error::LUTs missing from app bundle"; exit 1; }
+          du -sh "$APP"
           (cd build && /usr/bin/ditto -c -k --keepParent Payload Carbon-unsigned.ipa)
             
       - name: Upload IPA artifact

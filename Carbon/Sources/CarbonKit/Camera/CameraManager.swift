@@ -30,6 +30,8 @@ final class CameraManager: NSObject, ObservableObject {
     private var videoDeviceInput: AVCaptureDeviceInput?
     private let photoOutput = AVCapturePhotoOutput()
     private var currentDevice: AVCaptureDevice?
+    private var sessionConfigured = false
+    private var pendingExposureWorkItem: DispatchWorkItem?
     private let sessionQueue = DispatchQueue(label: "app.carbon.camera.session")
     private let logger = Logger(subsystem: "app.carbon", category: "CameraManager")
     
@@ -45,7 +47,14 @@ final class CameraManager: NSObject, ObservableObject {
     func startSession() {
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
-            self.configureSession()
+            if self.sessionConfigured {
+                self.session.startRunning()
+                Task { @MainActor in
+                    self.isSessionRunning = self.session.isRunning
+                }
+            } else {
+                self.configureSession()
+            }
         }
     }
     
@@ -79,11 +88,13 @@ final class CameraManager: NSObject, ObservableObject {
         
         do {
             let input = try AVCaptureDeviceInput(device: device)
-            if session.canAddInput(input) {
-                session.addInput(input)
-                self.videoDeviceInput = input
-                self.currentDevice = device
+            guard session.canAddInput(input) else {
+                session.commitConfiguration()
+                return
             }
+            session.addInput(input)
+            self.videoDeviceInput = input
+            self.currentDevice = device
         } catch {
             logger.error("Failed to create device input: \(error.localizedDescription)")
             session.commitConfiguration()
@@ -91,19 +102,22 @@ final class CameraManager: NSObject, ObservableObject {
         }
         
         // Add photo output
-        if session.canAddOutput(photoOutput) {
-            session.addOutput(photoOutput)
-            
-            // Lapse §1: Max quality prioritization
-            photoOutput.maxPhotoQualityPrioritization = .quality
-            
-            // Format setup (D-002: RAW+HEVC when available)
-            if photoOutput.availableRawPhotoPixelFormatTypes.count > 0 {
-                logger.info("Bayer RAW capture supported on device")
-            }
+        guard session.canAddOutput(photoOutput) else {
+            session.commitConfiguration()
+            return
         }
+        session.addOutput(photoOutput)
         
+        // Lapse §1: Max quality prioritization
+        photoOutput.maxPhotoQualityPrioritization = .quality
+
+        // Format setup (D-002: RAW+HEVC when available)
+        if photoOutput.availableRawPhotoPixelFormatTypes.count > 0 {
+            logger.info("Bayer RAW capture supported on device")
+        }
+
         session.commitConfiguration()
+        sessionConfigured = true
         
         // Device-level configurations
         configureDeviceSettings(device)
@@ -224,18 +238,21 @@ final class CameraManager: NSObject, ObservableObject {
     
     func setExposureBias(_ ev: Float) {
         activeExposureEV = ev
+        pendingExposureWorkItem?.cancel()
         guard let device = currentDevice else { return }
-        
-        sessionQueue.async {
+
+        let workItem = DispatchWorkItem { [weak self, device] in
             do {
                 try device.lockForConfiguration()
                 let clamped = min(max(ev, device.minExposureTargetBias), device.maxExposureTargetBias)
                 device.setExposureTargetBias(clamped, completionHandler: nil)
                 device.unlockForConfiguration()
             } catch {
-                self.logger.error("Failed to set exposure bias: \(error.localizedDescription)")
+                self?.logger.error("Failed to set exposure bias: \(error.localizedDescription)")
             }
         }
+        pendingExposureWorkItem = workItem
+        sessionQueue.asyncAfter(deadline: .now() + 0.016, execute: workItem)
     }
     
     func setWarmthK(_ kelvinOffset: Float) {
@@ -243,26 +260,26 @@ final class CameraManager: NSObject, ObservableObject {
     }
     
     func setFocusAndExposure(at point: CGPoint) {
-        guard let device = session.inputs.compactMap({ ($0 as? AVCaptureDeviceInput)?.device }).first else {
-            return
-        }
-        
-        do {
-            try device.lockForConfiguration()
-            
-            if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.autoFocus) {
-                device.focusPointOfInterest = point
-                device.focusMode = .autoFocus
+        guard let device = currentDevice else { return }
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            do {
+                try device.lockForConfiguration()
+
+                if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.autoFocus) {
+                    device.focusPointOfInterest = point
+                    device.focusMode = .autoFocus
+                }
+
+                if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.autoExpose) {
+                    device.exposurePointOfInterest = point
+                    device.exposureMode = .autoExpose
+                }
+
+                device.unlockForConfiguration()
+            } catch {
+                self.logger.error("Failed to set focus/exposure point: \(error.localizedDescription)")
             }
-            
-            if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.autoExpose) {
-                device.exposurePointOfInterest = point
-                device.exposureMode = .autoExpose
-            }
-            
-            device.unlockForConfiguration()
-        } catch {
-            logger.error("Failed to set focus/exposure point: \(error.localizedDescription)")
         }
     }
     

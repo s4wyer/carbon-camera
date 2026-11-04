@@ -19,6 +19,7 @@ struct CameraView: View {
     @State private var showFilmFlap = false
     @State private var activePreset: PresetDefinition = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
     @State private var flapFlashMode: FilmFlapView.FlashMode = .auto
+    @State private var lastShotThumbnail: UIImage?
     
     var body: some View {
         ZStack {
@@ -111,8 +112,8 @@ struct CameraView: View {
                             coordinator.navigateTo(.rolls)
                         }) {
                             ZStack(alignment: .bottomTrailing) {
-                                if let lastShot = cameraManager.lastCapturedShot,
-                                   let thumb = PhotoThumbnailCache.shared.thumbnail(for: lastShot) {
+                                if cameraManager.lastCapturedShot != nil,
+                                   let thumb = lastShotThumbnail {
                                     Image(uiImage: thumb)
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
@@ -181,6 +182,13 @@ struct CameraView: View {
                     .padding(.bottom, 28)
                 }
             }
+        }
+        .task(id: cameraManager.lastCapturedShot?.id) {
+            guard let shot = cameraManager.lastCapturedShot else {
+                lastShotThumbnail = nil
+                return
+            }
+            lastShotThumbnail = await PhotoThumbnailCache.shared.thumbnail(for: shot)
         }
         .onAppear {
             cameraManager.startSession()

@@ -350,7 +350,6 @@ final class PhotoRenderer: ObservableObject {
     
     private func applyLUT(to image: CIImage, lutID: String, intensity: Float = 1.0) async throws -> CIImage {
         let lutData = try LUTResources.shared.load(lutID: lutID)
-        let dataCount = lutData.rgba.count * MemoryLayout<Float>.size
         let rawData = lutData.rgba.withUnsafeBufferPointer { buffer in
             Data(buffer: buffer)
         }

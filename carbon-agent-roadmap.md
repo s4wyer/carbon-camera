@@ -186,7 +186,7 @@ Source abbreviations: `Halide REF` = `HALIDE-IPA-TECHNICAL-PACKAGE.md`; `Lapse S
 | 013 | O02 Approved welcome | B | — |
 | 014 | U01 Photo-first camera layout | B | — |
 | 015 | L01 Local photo ownership | B | — (see M2b) |
-| 016 | R11 Recovery metadata and originals | A | NF REF §5 (negative mode / master tape) |
+| 016 | R11 Recovery metadata and originals | A | ✓ SET15 |
 | 017 | C04 Responsive shutter and queue | A | Halide REF §1 |
 | 018 | N05 Immediate photo access | B | — (see M2b) |
 | 019 | N02 Chronological Library | B | — (see M2b) |
@@ -206,7 +206,7 @@ Source abbreviations: `Halide REF` = `HALIDE-IPA-TECHNICAL-PACKAGE.md`; `Lapse S
 | 033 | U12 Film Box End-Flap | B | — |
 | 034 | U02 Mood exposure swipe | A | NF REF §6 (exposure bias clamp, semi-automatic controller); Lapse SET §2 (scene EV) |
 | 035 | N01 Unrestricted capture and Mood dial | B | — |
-| 035a | L04 Rolls as albums | B | — |
+| 035a | L04 Rolls as albums | A | ✓ SET15 |
 | 036 | U03 Warmth thumb wheel | A | NF REF §6 (WB offset); Lapse SET §2 (temperature/tint fallbacks) |
 | 037 | R08 Develop Exposure dial | A | Halide REF §1 (`CIRAWFilter` exposure, baseline exposure, boost, boost-shadow) |
 | 038 | U09 Physical shutter buttons | A | Halide REF §7 (`HLDVolumeControl` singleton, `MPMusicPlayerController` volume path) |
