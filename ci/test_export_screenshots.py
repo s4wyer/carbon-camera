@@ -28,7 +28,7 @@ class ScreenshotPackagingTests(unittest.TestCase):
             json.dumps([{"attachments": self.attachments}]), encoding="utf-8"
         )
 
-    def test_gallery_contains_five_named_pngs_and_relative_links(self):
+    def test_gallery_contains_named_pngs_and_relative_links(self):
         self.attachments.append({"suggestedHumanReadableName": "debug.txt"})
         self.write_manifest()
         package_screenshots(self.attachments_dir, self.output_dir)
@@ -42,7 +42,7 @@ class ScreenshotPackagingTests(unittest.TestCase):
     def test_missing_screen_fails_instead_of_publishing_incomplete_gallery(self):
         self.attachments.pop()
         self.write_manifest()
-        with self.assertRaisesRegex(ValueError, "Missing UI screenshots: 05-settings"):
+        with self.assertRaisesRegex(ValueError, "Missing UI screenshots: 09-stock-selected"):
             package_screenshots(self.attachments_dir, self.output_dir)
         self.assertFalse(self.output_dir.exists())
 

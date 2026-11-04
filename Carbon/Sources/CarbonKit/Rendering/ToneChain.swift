@@ -112,7 +112,8 @@ public struct ToneChain {
     /// match the cited references; grain/halation are separate passes applied by the caller.
     public static func apply(r: Float, g: Float, b: Float,
                              params: FilmEffectParameters,
-                             sceneEV: Float = 8.0) -> (Float, Float, Float) {
+                             sceneEV: Float = 8.0,
+                             lutTransform: ((Float, Float, Float) -> (Float, Float, Float))? = nil) -> (Float, Float, Float) {
         let s = params.strength
         
         // --- LUT stage (No Fusion §3: after halation/bloom/vignette, before exposure) ---
@@ -124,7 +125,7 @@ public struct ToneChain {
             // source LUT (we don't have the LUT binaries). Documented in tests/README.md.
             // NOTE: this is a verification harness; the actual LUT bytes are in the IPA,
             // not in this repo. Tests validate engine behavior, not LUT identity.
-            let result = verificationLUT(r: lr, g: lg, b: lb, name: lutName)
+            let result = lutTransform?(lr, lg, lb) ?? verificationLUT(r: lr, g: lg, b: lb, name: lutName)
             let mix = params.lutIntensity
             lr = lr * (1 - mix) + result.0 * mix
             lg = lg * (1 - mix) + result.1 * mix
@@ -314,8 +315,13 @@ public struct ToneChain {
     /// This is NOT the original Halide/No Fusion LUT binary; tests validate reproducibility,
     /// not LUT identity. See tests/README.md.
     static func verificationLUT(r: Float, g: Float, b: Float, name: String) -> (Float, Float, Float) {
-        // Simple shoulder + small color shift; deterministic per-name hash for distinction.
-        let hash = Float(abs(name.hashValue % 100)) / 1000.0
+        // Simple shoulder + small color shift; use a stable hash so box art is reproducible.
+        var stableHash: UInt32 = 2166136261
+        for byte in name.utf8 {
+            stableHash ^= UInt32(byte)
+            stableHash = stableHash &* 16777619
+        }
+        let hash = Float(stableHash % 100) / 1000.0
         func shoulder(_ x: Float) -> Float {
             // x/(1 + 0.15*x) has a gentle highlight rolloff
             let v = x / (1.0 + 0.15 * x)

@@ -15,6 +15,10 @@ SCREENS = {
     "03-preset-menu": "Preset browser",
     "04-rolls": "Rolls",
     "05-settings": "Settings",
+    "06-stock-top": "Stock browser, top",
+    "07-stock-middle": "Stock browser, middle",
+    "08-stock-bottom": "Stock browser, bottom",
+    "09-stock-selected": "Stock browser, selected",
 }
 
 
@@ -70,7 +74,7 @@ def package_screenshots(attachments_dir: Path, output_dir: Path) -> None:
     (output_dir / "index.html").write_text(gallery, encoding="utf-8")
     (output_dir / "README.txt").write_text(
         "Extract this ZIP, then open index.html in any web browser.\n"
-        "You can also open or share the five PNG files individually.\n"
+        "You can also open or share the PNG files individually.\n"
         "Xcode and a local web server are not required.\n",
         encoding="utf-8",
     )

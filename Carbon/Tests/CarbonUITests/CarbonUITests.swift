@@ -66,7 +66,29 @@ final class CarbonUITests: XCTestCase {
             presetAttachment.name = "03-preset-menu"
             presetAttachment.lifetime = .keepAlways
             add(presetAttachment)
-            
+
+            // Preserve the Stock browser at three scroll positions for visual review.
+            let stockScroll = app.scrollViews.element(boundBy: 1)
+            XCTAssertTrue(stockScroll.waitForExistence(timeout: 5))
+            let stockTop = XCTAttachment(screenshot: app.screenshot())
+            stockTop.name = "06-stock-top"
+            stockTop.lifetime = .keepAlways
+            add(stockTop)
+            let selectedStock = XCTAttachment(screenshot: app.screenshot())
+            selectedStock.name = "09-stock-selected"
+            selectedStock.lifetime = .keepAlways
+            add(selectedStock)
+            stockScroll.swipeUp()
+            let stockMiddle = XCTAttachment(screenshot: app.screenshot())
+            stockMiddle.name = "07-stock-middle"
+            stockMiddle.lifetime = .keepAlways
+            add(stockMiddle)
+            stockScroll.swipeUp()
+            let stockBottom = XCTAttachment(screenshot: app.screenshot())
+            stockBottom.name = "08-stock-bottom"
+            stockBottom.lifetime = .keepAlways
+            add(stockBottom)
+
             // Close preset menu
             app.buttons["Done"].tap()
             sleep(1)
