@@ -269,6 +269,7 @@ private struct RollEnvelopeCard: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(coverImage == nil ? "roll-without-cover-photo" : "roll-with-cover-photo")
         .task {
             if let coverID = roll.coverShotID ?? shots.first?.id,
                let shot = shots.first(where: { $0.id == coverID }) {

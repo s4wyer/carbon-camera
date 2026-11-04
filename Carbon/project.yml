@@ -34,6 +34,9 @@ targets:
       - path: Resources/LUTs
         type: folder
         buildPhase: resources
+      - path: Resources/UITesting
+        type: folder
+        buildPhase: resources
     info:
       path: Sources/CarbonApp/Info.plist
       properties:

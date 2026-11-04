@@ -83,6 +83,21 @@ struct CameraView: View {
                 // Viewfinder area (dominant photographic center)
                 ZStack {
                     CameraPreviewView(session: cameraManager.session)
+                        .overlay {
+                            if SampleShotFixture.isEnabled,
+                               let url = SampleShotFixture.imageURL,
+                               let image = UIImage(contentsOfFile: url.path) {
+                                GeometryReader { geometry in
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: geometry.size.width, height: geometry.size.height)
+                                        .clipped()
+                                        .accessibilityLabel("Sample photograph")
+                                        .accessibilityIdentifier("sample-shot-preview")
+                                }
+                            }
+                        }
                         .clipped()
                         .gesture(
                             DragGesture(minimumDistance: 10)
@@ -129,8 +144,7 @@ struct CameraView: View {
                             coordinator.navigateTo(.rolls)
                         }) {
                             ZStack(alignment: .bottomTrailing) {
-                                if cameraManager.lastCapturedShot != nil,
-                                   let thumb = lastShotThumbnail {
+                                if let thumb = lastShotThumbnail {
                                     Image(uiImage: thumb)
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
@@ -162,6 +176,7 @@ struct CameraView: View {
                             }
                         }
                         .accessibilityIdentifier("rolls-button")
+                        .accessibilityValue(lastShotThumbnail == nil ? "No photo" : "Photo available")
                         .frame(width: 60)
                         
                         Spacer()
@@ -202,14 +217,16 @@ struct CameraView: View {
             }
         }
         .task(id: cameraManager.lastCapturedShot?.id) {
-            guard let shot = cameraManager.lastCapturedShot else {
+            guard let shot = cameraManager.lastCapturedShot ?? SampleShotFixture.shot else {
                 lastShotThumbnail = nil
                 return
             }
             lastShotThumbnail = await PhotoThumbnailCache.shared.thumbnail(for: shot)
         }
         .onAppear {
-            cameraManager.startSession()
+            if !SampleShotFixture.isEnabled {
+                cameraManager.startSession()
+            }
             volumeObserver.onShutterPress = { triggerShutter() }
             volumeObserver.start()
             levelDetector.start()

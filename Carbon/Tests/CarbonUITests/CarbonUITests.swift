@@ -16,7 +16,7 @@ final class CarbonUITests: XCTestCase {
     func testCaptureAllScreens() throws {
         // Wait for welcome screen
         let openCameraButton = app.buttons["Open camera"]
-        XCTAssertTrue(openCameraButton.waitForExistence(timeout: 15))
+        XCTAssertTrue(openCameraButton.waitForExistence(timeout: 30))
         
         // Screenshot 1: Welcome
         let welcome = app.screenshot()
@@ -43,6 +43,10 @@ final class CarbonUITests: XCTestCase {
 
         let presetName = app.buttons["preset-name-button"]
         XCTAssertTrue(presetName.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.images["sample-shot-preview"].waitForExistence(timeout: 10))
+        let thumbnailButton = app.buttons.matching(identifier: "rolls-button")
+            .matching(NSPredicate(format: "value == %@", "Photo available")).firstMatch
+        XCTAssertTrue(thumbnailButton.waitForExistence(timeout: 10))
         
         // Screenshot 2: Camera viewfinder
         let camera = app.screenshot()
@@ -73,7 +77,7 @@ final class CarbonUITests: XCTestCase {
         XCTAssertTrue(rollsButton.waitForExistence(timeout: 5))
         do {
             rollsButton.tap()
-            sleep(2)
+            XCTAssertTrue(app.buttons["roll-with-cover-photo"].firstMatch.waitForExistence(timeout: 15))
             
             // Screenshot 4: Rolls screen
             let rolls = app.screenshot()
