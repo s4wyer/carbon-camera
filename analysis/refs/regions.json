@@ -401,5 +401,197 @@
         480
       ]
     }
+  },
+  {
+    "scene": "point_light",
+    "note": "white disc on a 5 % field: glow probe",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "far": [
+        20,
+        20,
+        120,
+        120
+      ]
+    }
+  },
+  {
+    "scene": "flat_000",
+    "note": "uniform field, 0 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_002",
+    "note": "uniform field, 2 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_005",
+    "note": "uniform field, 5 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_010",
+    "note": "uniform field, 10 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_018",
+    "note": "uniform field, 18 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_030",
+    "note": "uniform field, 30 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_050",
+    "note": "uniform field, 50 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_070",
+    "note": "uniform field, 70 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_090",
+    "note": "uniform field, 90 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_095",
+    "note": "uniform field, 95 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
+  },
+  {
+    "scene": "flat_100",
+    "note": "uniform field, 100 % linear luminance",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "center": [
+        448,
+        328,
+        512,
+        392
+      ]
+    }
   }
 ]

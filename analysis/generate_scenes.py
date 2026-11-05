@@ -301,6 +301,30 @@ def low_key():
                                                              int(W * 0.5) + 90, int(H * 0.5) + 120]}
 
 
+# ---------------------------------------------------------------- measurement fields
+# Flat fields: one uniform level per frame, so tone is read from the centre and
+# never mixes with vignette falloff (the ramp's bars sit at different radii).
+# Levels are LINEAR relative luminance in percent (18 = middle gray), converted
+# to sRGB code values. Assumption stated in the guide pipeline notes.
+FLAT_LEVELS = [0, 2, 5, 10, 18, 30, 50, 70, 90, 95, 100]
+
+
+def flat_field(pct):
+    lin = pct / 100.0
+    v = 12.92 * lin if lin <= 0.0031308 else 1.055 * lin ** (1 / 2.4) - 0.055
+    return np.ones((H, W, 3)) * v, {"center": [W // 2 - 32, H // 2 - 32, W // 2 + 32, H // 2 + 32]}
+
+
+def point_light():
+    """Dark field (linear 5 %) with one clipped white disc: halation/glow probe."""
+    v = 1.055 * 0.05 ** (1 / 2.4) - 0.055
+    img = np.ones((H, W, 3)) * v
+    yy, xx = np.mgrid[0:H, 0:W]
+    disc = np.hypot(xx - W / 2, yy - H / 2) < 40
+    img[disc] = 1.0
+    return img, {"far": [20, 20, 120, 120]}
+
+
 SCENES = [
     ("gray_ramp", lambda: (gray_ramp(), {}), "24-step neutral ramp, 0 to 1"),
     ("color_chart", color_chart, "24-patch chart incl. 4 skin, foliage, sky, primaries"),
@@ -313,7 +337,9 @@ SCENES = [
     ("food_warm", food_warm, "warm table, plate, saturated food"),
     ("high_key", high_key, "near-white scene, light skin"),
     ("low_key", low_key, "near-black scene, mid skin, rim light"),
-]
+    ("point_light", point_light, "white disc on a 5 % field: glow probe"),
+] + [(f"flat_{p:03d}", (lambda p=p: flat_field(p)), f"uniform field, {p} % linear luminance")
+     for p in FLAT_LEVELS]
 
 
 def main():

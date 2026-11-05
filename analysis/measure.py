@@ -25,7 +25,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).parent))
-from lutlib import hue_delta, oklch, rel_luminance, rgb_to_oklab  # noqa: E402
+from lutlib import hue_delta, linear_to_srgb, oklch, rel_luminance, rgb_to_oklab  # noqa: E402
 
 HERE = Path(__file__).parent
 REFS = HERE / "refs"
@@ -51,52 +51,41 @@ def crop(img, rect):
 
 
 # ------------------------------------------------------------------ tone
-def gray_ramp_response(src: np.ndarray, out: np.ndarray) -> dict:
+def tone_response(outs: dict[str, np.ndarray]) -> dict:
     """
-    The ramp scene is 24 vertical bars from 0 to 1. Sample each bar's centre,
-    then interpolate the output at the requested percentages of input.
+    Read output from the centre of uniform flat-field frames. This isolates the
+    preset's tone curve from vignette falloff, blur at the edges, and noise.
+    Input levels are linear relative luminance in percent (FLAT_LEVELS).
     """
-    h, w, _ = src.shape
-    n = 24
-    bw = w // n
-    xs = [i * bw + bw // 2 for i in range(n)]
-    band = slice(h // 3, 2 * h // 3)
-    inp = np.array([src[band, x].mean(0) for x in xs])
-    o = np.array([out[band, x].mean(0) for x in xs])
-    in_v = inp.mean(1)
-    lum_o = rel_luminance(o)
-    lum_i = rel_luminance(inp)
-    lab_o = rgb_to_oklab(o)
-    q = np.array(GRAY_POINTS) / 100.0
-    curve_lum = np.interp(q, in_v, lum_o)
-    curve_L = np.interp(q, in_v, lab_o[:, 0])
-    in_L = rgb_to_oklab(np.repeat(q[:, None], 3, 1))[:, 0]
-    # midtone slope: dL_out / dL_in around input 50 % (OKLab L is perceptual)
-    lab_i = rgb_to_oklab(inp)[:, 0]
-    mid = (in_v > 0.3) & (in_v < 0.7)
-    slope = float(np.polyfit(lab_i[mid], lab_o[mid, 0], 1)[0]) if mid.sum() >= 3 else None
-    # white balance on the ramp: mean a/b of the 30..90 % bars
-    wb_sel = (in_v >= 0.3) & (in_v <= 0.9)
+    pts = [0, 2, 5, 10, 18, 30, 50, 70, 90, 95, 100]
+    c_slice = (slice(720 // 2 - 32, 720 // 2 + 32), slice(960 // 2 - 32, 960 // 2 + 32))
+    centres = np.array([outs[f"flat_{p:03d}"][c_slice].reshape(-1, 3).mean(0) for p in pts])
+    lum_o = rel_luminance(centres)
+    lab_o = rgb_to_oklab(centres)
+    lin_i = np.array(pts) / 100.0
+    lab_i = rgb_to_oklab(linear_to_srgb(np.repeat(lin_i[:, None], 3, 1)))[:, 0]   # rgb_to_oklab takes sRGB-encoded
+    # Midtone slope: dL_out / dL_in across the 18..70 % linear band.
+    mid = (lin_i >= 0.18) & (lin_i <= 0.70)
+    slope = float(np.polyfit(lab_i[mid], lab_o[mid, 0], 1)[0])
+    # White balance on the neutral flat fields (30..90 % linear).
+    wb_sel = (lin_i >= 0.30) & (lin_i <= 0.90)
     a = float(lab_o[wb_sel, 1].mean())
     b = float(lab_o[wb_sel, 2].mean())
-    # first input level whose output exceeds 1 % luminance: where shadows "open"
-    open_at = float(np.interp(0.01, lum_o, in_v)) if lum_o.max() > 0.01 else None
+    open_at = float(np.interp(0.01, lum_o, lin_i)) if lum_o.max() > 0.01 else None
     return {
-        "input_percent": GRAY_POINTS,
-        "out_luminance": curve_lum.round(4).tolist(),
-        "out_L": curve_L.round(4).tolist(),
-        "in_L": in_L.round(4).tolist(),
+        "input_linear_pct": pts,
+        "out_luminance": lum_o.round(4).tolist(),
+        "out_L": lab_o[:, 0].round(4).tolist(),
+        "in_L": lab_i.round(4).tolist(),
         "black_L": round(float(lab_o[0, 0]), 4),
         "white_L": round(float(lab_o[-1, 0]), 4),
-        "mid_L_shift": round(float(np.interp(0.5, in_v, lab_o[:, 0]) - np.interp(0.5, in_v, lab_i)), 4),
-        "midtone_slope": None if slope is None else round(slope, 3),
-        "shadows_open_at_input": None if open_at is None else round(open_at, 3),
+        "mid_L_shift": round(float(lab_o[4, 0] - lab_i[4]), 4),    # 18 % level
+        "midtone_slope": round(slope, 3),
+        "shadows_open_at_linear_input": None if open_at is None else round(open_at, 3),
         "wb_a": round(a, 4), "wb_b": round(b, 4),
-        "ramp_monotonic": bool(np.all(np.diff(lab_o[:, 0]) >= -0.002)),
-        "ramp_flat_steps": int(np.sum(np.abs(np.diff(lab_o[:, 0])) < 0.002)),
-        "in_luminance": lum_i.round(4).tolist(),
+        "monotonic": bool(np.all(np.diff(lab_o[:, 0]) >= -0.002)),
+        "flat_steps": int(np.sum(np.abs(np.diff(lab_o[:, 0])) < 0.002)),
     }
-
 
 def clipping(out: np.ndarray) -> dict:
     mx = out.max(-1)
@@ -217,40 +206,30 @@ def skin_flags(r: dict, name: str) -> list[str]:
 # ------------------------------------------------------------------ texture
 def texture(src_by_scene: dict, out_by_scene: dict, baseline_by_scene: dict) -> dict:
     """
-    Grain: high-frequency residual on flat regions vs. the baseline render.
-    Glow: brightness added around highlights in backlit_sun vs. baseline.
-    Vignette: corner vs centre L drop on the gray-card-like high_key scene.
+    Grain: std of sRGB-encoded red on the uniform flat_050 frame (linear 50 %, midtone).
+    Glow: L difference in a ring 50..90 px from the point_light white disc.
+    Vignette: corner vs centre L on flat_050.
     """
-    def hf(img):
-        L = rgb_to_oklab(img)[..., 0]
-        k = 3
-        pad = np.pad(L, k, mode="edge")
-        blur = np.zeros_like(L)
-        for dy in range(-k, k + 1):
-            for dx in range(-k, k + 1):
-                blur += pad[k + dy:k + dy + L.shape[0], k + dx:k + dx + L.shape[1]]
-        blur /= (2 * k + 1) ** 2
-        return L - blur
+    f50 = out_by_scene["flat_050"]
+    c_slice = (slice(720 // 2 - 40, 720 // 2 + 40), slice(960 // 2 - 40, 960 // 2 + 40))
+    grain_std = float(rgb_to_oklab(f50[c_slice].reshape(-1, 3))[:, 0].std())
 
-    hk = out_by_scene["high_key"]
-    hk_b = baseline_by_scene["high_key"]
-    flat = (slice(20, 200), slice(20, 260))
-    grain = float(hf(hk)[flat].std() - hf(hk_b)[flat].std())
+    pl = out_by_scene["point_light"]
+    yy, xx = np.mgrid[0:720, 0:960]
+    r = np.hypot(xx - 960 / 2, yy - 720 / 2)
+    ring = (r >= 45) & (r <= 75)
+    far = (r >= 240) & (r <= 320)
+    L_pl = rgb_to_oklab(pl.reshape(-1, 3))[:, 0].reshape(720, 960)
+    glow = float(L_pl[ring].mean() - L_pl[far].mean())
 
-    bs = out_by_scene["backlit_sun"]
-    bs_b = baseline_by_scene["backlit_sun"]
-    ring = (slice(140, 300), slice(420, 560))     # sky band between sun and figure
-    glow = float(rgb_to_oklab(bs)[ring][..., 0].mean() - rgb_to_oklab(bs_b)[ring][..., 0].mean())
-
-    L = rgb_to_oklab(hk)[..., 0]
-    Lb = rgb_to_oklab(hk_b)[..., 0]
-    h, w = L.shape
-    c = (slice(h // 2 - 30, h // 2 + 30), slice(40, 120))
+    L_50 = rgb_to_oklab(f50.reshape(-1, 3))[:, 0].reshape(720, 960)
     corner = (slice(0, 60), slice(0, 60))
-    vig = float((Lb[corner].mean() - L[corner].mean()) - (Lb[c].mean() - L[c].mean()))
-    return {"grain_hf_std_delta": round(grain, 5), "glow_L_delta": round(glow, 4),
-            "vignette_corner_L_drop": round(vig, 4)}
-
+    corner_drop = float(L_50[c_slice].mean() - L_50[corner].mean())
+    return {
+        "grain_L_std": round(grain_std, 4),
+        "glow_L_lift": round(glow, 4),
+        "vignette_corner_L_drop": round(corner_drop, 4),
+    }
 
 # ------------------------------------------------------------------ main
 def main() -> int:
@@ -275,10 +254,10 @@ def main() -> int:
             if o[s].shape != src[s].shape:
                 raise SystemExit(f"{pid}/{s}: shape {o[s].shape} != {src[s].shape}")
         m = {"display": display[pid]}
-        m["tone"] = gray_ramp_response(src["gray_ramp"], o["gray_ramp"])
+        m["tone"] = tone_response(o)
         m["per_scene"] = {}
         for s in scenes:
-            if s in ("gray_ramp", "color_chart", "skin_ramp"):
+            if s.startswith("flat_") or s in ("gray_ramp", "color_chart", "skin_ramp", "point_light"):
                 continue
             entry = {**clipping(o[s]), **spread(src[s], o[s]),
                      "shadow_detail": local_detail(src[s], o[s], DETAIL_SHADOW),

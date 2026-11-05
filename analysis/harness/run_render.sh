@@ -32,7 +32,7 @@ for f in Models/Contracts Models/PresetParameters Models/MediaTimeCoding \
          Models/PresetCatalog Models/PresetLibrary \
          Rendering/ToneChain Rendering/CIContextProvider Rendering/LUTLoader \
          Rendering/LUTResources Rendering/PhotoGeometry Rendering/RenderWorker \
-         Rendering/PhotoRenderer Rendering/RAWDevelopment Camera/CaptureJournal; do
+         Rendering/PhotoRenderer Rendering/RAWDevelopment Camera/CaptureJournal Rendering/FilmEffects; do
     cp "$ROOT/Carbon/Sources/CarbonKit/$f.swift" "$PKG/Sources/Harness/"
 done
 
