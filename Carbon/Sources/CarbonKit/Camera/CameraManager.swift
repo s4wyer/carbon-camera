@@ -111,6 +111,8 @@ final class CameraManager: NSObject, ObservableObject {
             return
         }
         session.addOutput(photoOutput)
+        photoOutput.isLivePhotoCaptureEnabled = false
+        photoOutput.isDepthDataDeliveryEnabled = false
         
         // Lapse §1: output allows quality; per-shot priority adapts to scene EV.
         photoOutput.maxPhotoQualityPrioritization = .quality
@@ -350,6 +352,13 @@ final class CameraManager: NSObject, ObservableObject {
     }
     
     private func buildPhotoSettings() -> AVCapturePhotoSettings {
+        if let device = currentDevice, device.exposureDuration.seconds > 0, device.iso > 0 {
+            currentSceneEV = Self.sceneEV(
+                aperture: Float(device.lensAperture),
+                iso: device.iso,
+                exposureSeconds: device.exposureDuration.seconds
+            )
+        }
         var settings = Self.makePhotoSettings(
             rawPixelFormatType: Self.isLapsePreset(activePreset) ? nil : photoOutput.availableRawPhotoPixelFormatTypes.first,
             maximumQuality: photoOutput.maxPhotoQualityPrioritization,
@@ -563,8 +572,8 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         
         // Extract Lapse SET §2 metadata tuple
         let metadata = photo.metadata
-        let iso = (metadata[kCGImagePropertyExifISOSpeedRatings as String] as? [Int])?.first ?? 100
-        let expDuration = metadata[kCGImagePropertyExifExposureTime as String] as? Double ?? (1.0 / 60.0)
+        let iso = (metadata[kCGImagePropertyExifISOSpeedRatings as String] as? [Int])?.first ?? 0
+        let expDuration = metadata[kCGImagePropertyExifExposureTime as String] as? Double ?? 0
         let cmDuration = CMTime(seconds: expDuration, preferredTimescale: 1000)
         
         let orientation = metadata[kCGImagePropertyOrientation as String] as? Int ?? 1
@@ -576,7 +585,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         captureMetadata = Shot.CaptureMetadata(
             temperature: wb.temperature,
             tint: wb.tint,
-            iso: Float(iso),
+            iso: Float(iso > 0 ? iso : 100),
             exposureDuration: cmDuration,
             sceneEV: sceneEV,
             flashState: requestedFlashMode == .on ? .on : (requestedFlashMode == .auto ? .auto : .off),
