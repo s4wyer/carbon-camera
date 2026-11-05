@@ -1,8 +1,8 @@
 # LUT Resources Manifest
 
-**Total LUTs:** 45 files (24 Halide .ccube, 20 No Fusion .lutbin, 1 Lapse .cube)
+**Total LUTs:** 46 files (25 Halide .ccube, 20 No Fusion .lutbin, 1 Lapse .cube)
 
-## Halide LUTs (24 files, 33³ LZFSE-compressed half-float RGB)
+## Halide LUTs (25 files, 33³ LZFSE-compressed half-float RGB)
 
 | Preset | SDR LUT | HDR LUT |
 |---|---|---|
@@ -16,7 +16,8 @@
 | Valencia | ValenciaDisplayP3SDR.ccube | ValenciaDisplayP3HDR.ccube |
 | Quicksilver | QuicksilverSDR.ccube | QuicksilverHDR.ccube |
 | Dawn | DawnSDR.ccube | DawnHDR.ccube |
-| Elysia | ElysiaSDR.ccube | ElysiaHDR.ccube |
+| Elysia (original, not referenced by the catalog) | ElysiaSDR.ccube | ElysiaHDR.ccube |
+| Elysia (Carbon correction, used by the catalog) | ElysiaCarbonSDR.ccube | - |
 | Onyx | OnyxSDR.ccube | OnyxHDR.ccube |
 
 **Format:** 33³ × 3 half-floats (RGB), LZFSE-compressed → 215,622 bytes decoded  
@@ -64,7 +65,7 @@
 - **No Fusion 2.5.61 Dev IPA:** `nofusion-recovered/originals/NFAsset.framework/`
 - **Evidence:** See `docs/reference/HALIDE-IPA-TECHNICAL-PACKAGE.md` §2, `nofusion-recovered/README.md`
 
-All LUT files are copied verbatim from the original IPAs. No modification, re-encoding, or re-sampling was performed.
+All LUT files are copied verbatim from the original IPAs, with one exception: `halide/ElysiaCarbonSDR.ccube` is derived from `ElysiaSDR.ccube` by `scripts/derive_elysia_lut.py`. It replaces only the nodes where a green input renders magenta (a hue reversal over 75 degrees); every other node, including the gray axis, is bit-identical to the original. Halide cubes are indexed by Apple Log encoded Rec.2020 values (see `FilmEffects.applyHalideCube`).
 
 ## License & Attribution
 

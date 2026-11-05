@@ -76,6 +76,9 @@ public class LUTResources {
                 "halide-dawn-hdr": "DawnHDR",
                 "halide-elysia-sdr": "ElysiaSDR",
                 "halide-elysia-hdr": "ElysiaHDR",
+                // Carbon correction of ElysiaSDR: green-to-magenta reversal removed
+                // (scripts/derive_elysia_lut.py). The original stays bundled for provenance.
+                "halide-elysia-carbon-sdr": "ElysiaCarbonSDR",
                 "halide-onyx-sdr": "OnyxSDR",
                 "halide-onyx-hdr": "OnyxHDR",
                 "halide-chroma-noir-scene-sdr": "ChromaNoirSceneSDR",
