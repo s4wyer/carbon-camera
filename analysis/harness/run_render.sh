@@ -156,4 +156,4 @@ if grep -q "preset: PresetDefinition? = nil" "$PKG/Sources/Harness/PhotoRenderer
     FLAGS=(-Xswiftc -DHAS_PRESET_ARG)
     echo "renderPreview accepts preset: Lapse presets use LapseRenderer"
 fi
-swift run --package-path "$PKG" -c release "${FLAGS[@]}" Harness "$IN_DIR" "$OUT_DIR"
+swift run --package-path "$PKG" -c release ${FLAGS[@]+"${FLAGS[@]}"} Harness "$IN_DIR" "$OUT_DIR"
