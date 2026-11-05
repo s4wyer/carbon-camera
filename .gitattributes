@@ -1,0 +1,4 @@
+# LUT payloads are hashed against recovered originals; never convert line endings.
+*.cube -text
+*.ccube binary
+*.lutbin binary

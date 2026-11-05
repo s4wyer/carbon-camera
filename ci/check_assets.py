@@ -22,6 +22,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import hashlib
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,6 +32,12 @@ LUT_RESOURCES = os.path.join(REPO, "Carbon/Sources/CarbonKit/Rendering/LUTResour
 LUT_DIR = os.path.join(REPO, "Carbon/Resources/LUTs")
 HALIDE_DIR = os.path.join(LUT_DIR, "halide")
 NOFUSION_DIR = os.path.join(LUT_DIR, "nofusion")
+LAPSE_DIR = os.path.join(LUT_DIR, "lapse")
+# lapse-camera-settings.md section 8: V4-03 cube text SHA-256 (33^3 rows).
+LAPSE_CUBES = {
+    "lapse-v4-03": ("Lapse-V4-03.cube",
+                    "6e9a03e7d1c9c32779feba4e74addc809797a8dfb2f6b02cd985972f6d7ca239"),
+}
 MANIFEST = os.path.join(LUT_DIR, "LUT-MANIFEST.md")
 PRESET_LUT_MAP = os.path.join(REPO, "nofusion-recovered/preset_lut_map.csv")
 
@@ -118,6 +125,22 @@ def run() -> int:
                 lut_id[len("nofusion-"):] in nofusion_files,
                 f"catalog lutID '{lut_id}' has no bundled .lutbin",
             )
+        elif lut_id.startswith("lapse-"):
+            entry = LAPSE_CUBES.get(lut_id)
+            if not failures.check(entry is not None, f"catalog lutID '{lut_id}' is not a known Lapse cube"):
+                continue
+            name, digest = entry
+            path = os.path.join(LAPSE_DIR, name)
+            if not failures.check(os.path.isfile(path), f"catalog lutID '{lut_id}' -> lapse/{name} is not bundled"):
+                continue
+            with open(path, "rb") as handle:
+                data = handle.read()
+            failures.check(hashlib.sha256(data).hexdigest() == digest,
+                           f"lapse/{name} SHA-256 does not match lapse-camera-settings.md section 8")
+            rows = [ln for ln in data.decode("utf-8").splitlines() if len(ln.split()) == 3]
+            failures.check(len(rows) == 33 ** 3, f"lapse/{name} has {len(rows)} rows, expected 33^3")
+            failures.check(f'"{name[:-5]}"' in resources,
+                           f"LUTResources does not resolve '{lut_id}' to {name}")
         else:
             failures.append(f"catalog lutID '{lut_id}' has no recognized source prefix")
 
