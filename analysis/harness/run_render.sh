@@ -32,7 +32,7 @@ for f in Models/Contracts Models/PresetParameters Models/MediaTimeCoding \
          Models/PresetCatalog Models/PresetLibrary \
          Rendering/ToneChain Rendering/CIContextProvider Rendering/LUTLoader \
          Rendering/LUTResources Rendering/PhotoGeometry Rendering/RenderWorker \
-         Rendering/PhotoRenderer; do
+         Rendering/PhotoRenderer Rendering/RAWDevelopment Camera/CaptureJournal; do
     cp "$ROOT/Carbon/Sources/CarbonKit/$f.swift" "$PKG/Sources/Harness/"
 done
 
@@ -52,6 +52,9 @@ src = src.replace(
 src = src.replace(
     'guard let url = Bundle.main.url(forResource: hash, withExtension: "lutbin", subdirectory: "LUTs/nofusion") else {',
     f'guard let url = Optional(URL(fileURLWithPath: "{root}/Carbon/Resources/LUTs/nofusion/" + hash + ".lutbin")), FileManager.default.fileExists(atPath: url.path) else {{')
+src = src.replace(
+    'guard let url = Bundle.main.url(forResource: "Lapse-V4-03", withExtension: "cube", subdirectory: "LUTs/lapse") else {',
+    f'guard let url = Optional(URL(fileURLWithPath: "{root}/Carbon/Resources/LUTs/lapse/Lapse-V4-03.cube")), FileManager.default.fileExists(atPath: url.path) else {{')
 # Fail loudly if a Bundle.main lookup survives (e.g. a new LUT family was added).
 if 'Bundle.main' in src:
     raise SystemExit("LUTResources still references Bundle.main; extend run_render.sh")
@@ -111,17 +114,22 @@ struct HarnessMain {
         var report: [[String: Any]] = []
         // "_baseline" renders neutral PresetParameters(): it isolates the stage
         // every preset shares (highlight shoulder) from each preset's own look.
-        var presets: [(String, String, PresetParameters)] = [("_baseline", "Baseline", PresetParameters())]
-        for p in PresetLibrary.all { presets.append((p.presetID, p.displayName, p.baseParameters)) }
+        var presets: [(String, String, PresetParameters, PresetDefinition?)] = [("_baseline", "Baseline", PresetParameters(), nil)]
+        for p in PresetLibrary.all { presets.append((p.presetID, p.displayName, p.baseParameters, p)) }
         FileHandle.standardOutput.write("rendering \(presets.count) presets x \(inputs.count) scenes on Metal\n".data(using: .utf8)!)
 
-        for (presetID, displayName, parameters) in presets {
+        for (presetID, displayName, parameters, definition) in presets {
             let dir = outDir.appendingPathComponent(presetID, isDirectory: true)
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             for input in inputs {
                 guard let image = load(input) else { continue }
                 do {
+                    #if HAS_PRESET_ARG
+                    let out = try await renderer.renderPreview(image: image, parameters: parameters, preset: definition)
+#else
+                    _ = definition
                     let out = try await renderer.renderPreview(image: image, parameters: parameters)
+#endif
                     let name = "\(input.deletingPathExtension().lastPathComponent).png"
                     writePNG(out, extent: image.extent, to: dir.appendingPathComponent(name))
                     report.append(["preset": presetID, "display": displayName,
@@ -143,4 +151,9 @@ struct HarnessMain {
 }
 SWIFT
 
-swift run --package-path "$PKG" -c release Harness "$IN_DIR" "$OUT_DIR"
+FLAGS=()
+if grep -q "preset: PresetDefinition? = nil" "$PKG/Sources/Harness/PhotoRenderer.swift"; then
+    FLAGS=(-Xswiftc -DHAS_PRESET_ARG)
+    echo "renderPreview accepts preset: Lapse presets use LapseRenderer"
+fi
+swift run --package-path "$PKG" -c release "${FLAGS[@]}" Harness "$IN_DIR" "$OUT_DIR"
