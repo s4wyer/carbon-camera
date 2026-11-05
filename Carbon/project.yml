@@ -126,6 +126,9 @@ schemes:
     test:
       config: Debug
       gatherCoverageData: true
+      # Gallery export uses explicit XCTAttachment PNGs, not automatic videos.
+      captureScreenshotsAutomatically: false
+      preferredScreenCaptureFormat: screenshots
       targets:
         - CarbonKitTests
         - CarbonUITests

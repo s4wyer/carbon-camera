@@ -12,6 +12,11 @@ SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/null}"
 BOOT_LOG="build/$RESULT_NAME-simulator.log"
 BOOT_PID=""
 DEVICE=""
+HOST_ARCH=$(uname -m)
+case "$HOST_ARCH" in
+  arm64|x86_64) ;;
+  *) echo "::error::Unsupported simulator architecture: $HOST_ARCH"; exit 1 ;;
+esac
 
 record_timing() {
   printf '| %s | %ss |\n' "$1" "$2" >> "$SUMMARY_FILE"
@@ -56,14 +61,16 @@ echo "Selected simulator: $DEVICE"
 xcrun simctl bootstatus "$DEVICE" -b > "$BOOT_LOG" 2>&1 &
 BOOT_PID=$!
 
-COMMON_ARGS=(
+BUILD_ARGS=(
   -project Carbon.xcodeproj
   -scheme Carbon
-  -destination "platform=iOS Simulator,id=$DEVICE"
+  -destination 'generic/platform=iOS Simulator'
   -only-testing:"$TEST_TARGET"
   -derivedDataPath ./build/DerivedData
   -parallel-testing-enabled NO
   -enableCodeCoverage YES
+  "ARCHS=$HOST_ARCH"
+  ONLY_ACTIVE_ARCH=YES
   CODE_SIGNING_ALLOWED=NO
   COMPILATION_CACHE_ENABLE_CACHING=YES
   COMPILATION_CACHE_ENABLE_DIAGNOSTIC_REMARKS=YES
@@ -71,8 +78,17 @@ COMMON_ARGS=(
 )
 
 run_timed "Compile test bundles (overlaps simulator boot)" \
-  xcodebuild build-for-testing "${COMMON_ARGS[@]}" -showBuildTimingSummary \
+  xcodebuild build-for-testing "${BUILD_ARGS[@]}" -showBuildTimingSummary \
   2>&1 | tee "build/$RESULT_NAME-build.log"
+
+# Products are fresh on every runner; only compiler outputs are cached. Require
+# one manifest so an ambiguous or missing build cannot select stale test bundles.
+TEST_RUNS=(./build/DerivedData/Build/Products/*.xctestrun)
+if [ "${#TEST_RUNS[@]}" -ne 1 ] || [ ! -f "${TEST_RUNS[0]}" ]; then
+  echo "::error::Expected exactly one generated .xctestrun in build/DerivedData/Build/Products"
+  exit 1
+fi
+echo "Test manifest: ${TEST_RUNS[0]}"
 
 STARTED=$SECONDS
 if wait "$BOOT_PID"; then
@@ -87,9 +103,20 @@ fi
 cat "$BOOT_LOG"
 record_timing "Wait for simulator after compilation" "$((SECONDS - STARTED))"
 
-# Use the same destination, DerivedData, coverage setting, and single simulator
-# for both phases; this avoids a second build or a pool of simulator clones.
+# The manifest contains the built bundle paths and configuration. Execute it
+# directly, without loading the project or re-evaluating the scheme's build.
 run_timed "Execute tests without rebuilding" \
-  xcodebuild test-without-building "${COMMON_ARGS[@]}" \
+  xcodebuild test-without-building \
+    -xctestrun "${TEST_RUNS[0]}" \
+    -destination "platform=iOS Simulator,id=$DEVICE,arch=$HOST_ARCH" \
+    -only-testing:"$TEST_TARGET" \
+    -parallel-testing-enabled NO \
+    -enableCodeCoverage YES \
     -resultBundlePath "./build/$RESULT_NAME.xcresult" \
   2>&1 | tee "build/$RESULT_NAME-test.log"
+
+# Incompatible bundles can be skipped by Xcode. A successful process alone must
+# not turn an empty or skipped suite green after changing destination handling.
+xcrun xcresulttool get test-results summary --path "./build/$RESULT_NAME.xcresult" \
+  > "build/$RESULT_NAME-summary.json"
+python3 ../ci/check_test_results.py "build/$RESULT_NAME-summary.json"

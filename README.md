@@ -111,8 +111,12 @@ workflow on the same branch or pull request.
 The macOS jobs pin Xcode 26.3 and cache its content-addressed compilation outputs
 by compiler build, SDK build, runner architecture, and job. Each commit saves an
 updated cache snapshot; a cold cache still builds normally. Unit and UI tests
-boot one iPhone simulator on the newest available runtime while `build-for-testing` compiles,
-then use `test-without-building` on that same simulator. Each test job's summary
+boot one iPhone simulator on the newest available runtime while `build-for-testing`
+compiles for a generic simulator, restricted to the runner's architecture. Tests
+then run directly from the generated `.xctestrun` file on that simulator, without
+loading the project again. CI rejects empty or skipped suites. Automatic screen
+recordings and screenshots are disabled; named PNG attachments are still captured
+explicitly by the UI tests and exported to the gallery. Each test job's summary
 reports destination selection, compilation, the remaining simulator wait, and
 test execution times. Phase logs are also uploaded for startup diagnostics.
 
