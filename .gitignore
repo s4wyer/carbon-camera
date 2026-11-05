@@ -3,3 +3,7 @@ j.json
 .tmp/
 __pycache__/
 screenshots/
+
+# analysis scratch (renders downloaded from CI)
+analysis/renders/
+analysis/.cache/

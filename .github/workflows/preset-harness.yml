@@ -1,0 +1,51 @@
+name: Preset measurement harness
+
+# Renders analysis/refs/*.png through Carbon's production PhotoRenderer on a
+# real macOS Metal device and uploads the pixels for analysis/measure.py.
+# Triggered on pushes to analysis/** branches or manually.
+
+on:
+  push:
+    branches: [ 'analysis/**' ]
+    paths:
+      - 'analysis/**'
+      - 'Carbon/Sources/CarbonKit/Rendering/**'
+      - 'Carbon/Sources/CarbonKit/Models/**'
+      - 'Carbon/Resources/LUTs/**'
+      - '.github/workflows/preset-harness.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: preset-harness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Render presets on macOS Metal
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.3'
+
+      - name: Record environment
+        run: |
+          sw_vers
+          xcrun swift --version
+          system_profiler SPDisplaysDataType | sed -n '1,25p' || true
+
+      - name: Render
+        run: bash analysis/harness/run_render.sh "$PWD/analysis/refs" "$RUNNER_TEMP/renders"
+
+      - name: Upload renders
+        uses: actions/upload-artifact@v4
+        with:
+          name: preset-renders
+          path: ${{ runner.temp }}/renders
+          if-no-files-found: error
+          retention-days: 14

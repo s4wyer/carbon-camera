@@ -1,0 +1,405 @@
+[
+  {
+    "scene": "gray_ramp",
+    "note": "24-step neutral ramp, 0 to 1",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {}
+  },
+  {
+    "scene": "color_chart",
+    "note": "24-patch chart incl. 4 skin, foliage, sky, primaries",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "patch_0": [
+        4,
+        4,
+        156,
+        176
+      ],
+      "patch_1": [
+        164,
+        4,
+        316,
+        176
+      ],
+      "patch_2": [
+        324,
+        4,
+        476,
+        176
+      ],
+      "patch_3": [
+        484,
+        4,
+        636,
+        176
+      ],
+      "patch_4": [
+        644,
+        4,
+        796,
+        176
+      ],
+      "patch_5": [
+        804,
+        4,
+        956,
+        176
+      ],
+      "patch_6": [
+        4,
+        184,
+        156,
+        356
+      ],
+      "patch_7": [
+        164,
+        184,
+        316,
+        356
+      ],
+      "patch_8": [
+        324,
+        184,
+        476,
+        356
+      ],
+      "patch_9": [
+        484,
+        184,
+        636,
+        356
+      ],
+      "patch_10": [
+        644,
+        184,
+        796,
+        356
+      ],
+      "patch_11": [
+        804,
+        184,
+        956,
+        356
+      ],
+      "patch_12": [
+        4,
+        364,
+        156,
+        536
+      ],
+      "patch_13": [
+        164,
+        364,
+        316,
+        536
+      ],
+      "patch_14": [
+        324,
+        364,
+        476,
+        536
+      ],
+      "patch_15": [
+        484,
+        364,
+        636,
+        536
+      ],
+      "patch_16": [
+        644,
+        364,
+        796,
+        536
+      ],
+      "patch_17": [
+        804,
+        364,
+        956,
+        536
+      ],
+      "patch_18": [
+        4,
+        544,
+        156,
+        716
+      ],
+      "patch_19": [
+        164,
+        544,
+        316,
+        716
+      ],
+      "patch_20": [
+        324,
+        544,
+        476,
+        716
+      ],
+      "patch_21": [
+        484,
+        544,
+        636,
+        716
+      ],
+      "patch_22": [
+        644,
+        544,
+        796,
+        716
+      ],
+      "patch_23": [
+        804,
+        544,
+        956,
+        716
+      ]
+    }
+  },
+  {
+    "scene": "skin_ramp",
+    "note": "5-anchor skin reflectance ramp, very light to deep",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "skin_light": [
+        20,
+        200,
+        180,
+        520
+      ],
+      "skin_medium": [
+        380,
+        200,
+        560,
+        520
+      ],
+      "skin_dark": [
+        780,
+        200,
+        940,
+        520
+      ]
+    }
+  },
+  {
+    "scene": "landscape",
+    "note": "sky gradient, sun glow, foliage, deep foreground shadow",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "sky": [
+        500,
+        20,
+        940,
+        170
+      ],
+      "foliage": [
+        60,
+        540,
+        420,
+        690
+      ],
+      "shadow": [
+        20,
+        640,
+        300,
+        715
+      ],
+      "land": [
+        520,
+        400,
+        900,
+        470
+      ]
+    }
+  },
+  {
+    "scene": "backlit_sun",
+    "note": "blown sky, silhouette, rim light",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "blown_sky": [
+        640,
+        40,
+        900,
+        150
+      ],
+      "shadow": [
+        240,
+        380,
+        350,
+        600
+      ],
+      "rim": [
+        330,
+        300,
+        400,
+        460
+      ]
+    }
+  },
+  {
+    "scene": "indoor_tungsten",
+    "note": "warm lamp pools, wooden table, warm-lit skin",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "skin_warm": [
+        60,
+        450,
+        500,
+        560
+      ],
+      "warm_wall": [
+        560,
+        60,
+        900,
+        300
+      ],
+      "shadow": [
+        20,
+        20,
+        200,
+        160
+      ]
+    }
+  },
+  {
+    "scene": "indoor_fluorescent",
+    "note": "greenish strip lights, cool skin, white paper",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "fluorescent_wall": [
+        600,
+        300,
+        900,
+        480
+      ],
+      "skin_cool": [
+        170,
+        320,
+        400,
+        500
+      ],
+      "white_paper": [
+        560,
+        600,
+        900,
+        700
+      ]
+    }
+  },
+  {
+    "scene": "night_neon",
+    "note": "cyan/magenta neon, wet reflections, dim skin",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "neon_cyan": [
+        152,
+        211,
+        232,
+        291
+      ],
+      "neon_magenta": [
+        488,
+        140,
+        568,
+        220
+      ],
+      "skin_dim": [
+        353,
+        346,
+        453,
+        446
+      ],
+      "shadow": [
+        40,
+        40,
+        200,
+        200
+      ]
+    }
+  },
+  {
+    "scene": "food_warm",
+    "note": "warm table, plate, saturated food",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "food_center": [
+        330,
+        286,
+        630,
+        506
+      ],
+      "plate_white": [
+        100,
+        596,
+        180,
+        656
+      ],
+      "table_warm": [
+        40,
+        60,
+        260,
+        200
+      ]
+    }
+  },
+  {
+    "scene": "high_key",
+    "note": "near-white scene, light skin",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "skin_high_key": [
+        360,
+        174,
+        600,
+        474
+      ]
+    }
+  },
+  {
+    "scene": "low_key",
+    "note": "near-black scene, mid skin, rim light",
+    "size": [
+      960,
+      720
+    ],
+    "regions": {
+      "skin_low_key": [
+        390,
+        240,
+        570,
+        480
+      ]
+    }
+  }
+]
