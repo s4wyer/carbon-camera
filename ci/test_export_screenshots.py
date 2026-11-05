@@ -1,9 +1,16 @@
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
-from export_screenshots import SCREENS, package_screenshots
+from export_screenshots import (
+    SCREENS,
+    package_screenshots,
+    publish_screenshots,
+    render_summary,
+    write_summary,
+)
 from test_check_ipa import png
 
 
@@ -51,6 +58,84 @@ class ScreenshotPackagingTests(unittest.TestCase):
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "01-welcome is not a PNG"):
             package_screenshots(self.attachments_dir, self.output_dir)
+
+    def test_render_summary_with_inline_images_and_artifact_url(self):
+        base_url = "https://github.com/acme/carbon/blob/ci-screenshots/runs/42-1"
+        artifact_url = "https://github.com/acme/carbon/actions/runs/42/artifacts/99"
+        summary = render_summary(base_image_url=base_url, artifact_url=artifact_url)
+        self.assertIn("## UI Screenshots", summary)
+        for name, title in SCREENS.items():
+            expected_img = f"{base_url}/{name}.png?raw=true"
+            self.assertIn(f'src="{expected_img}"', summary)
+            self.assertIn(f'alt="{title}"', summary)
+        self.assertIn(f"[Carbon-UI-Screenshots]({artifact_url})", summary)
+
+    def test_write_summary_fallback_without_base_image_url(self):
+        summary_file = Path(self.temporary.name) / "step_summary.md"
+        write_summary(
+            summary_file=summary_file,
+            base_image_url=None,
+            artifact_url="https://example.com/artifact.zip",
+        )
+        content = summary_file.read_text(encoding="utf-8")
+        for name, title in SCREENS.items():
+            self.assertIn(f"- **{name}.png** - {title}", content)
+        self.assertIn("https://example.com/artifact.zip", content)
+
+    def test_publish_screenshots_pushes_orphan_branch(self):
+        self.write_manifest()
+        package_screenshots(self.attachments_dir, self.output_dir)
+
+        remote_dir = Path(self.temporary.name) / "origin.git"
+        repo_dir = Path(self.temporary.name) / "repo"
+        subprocess.run(["git", "init", "--bare", str(remote_dir)], check=True, capture_output=True)
+        subprocess.run(["git", "init", str(repo_dir)], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(repo_dir), "remote", "add", "origin", str(remote_dir)],
+            check=True,
+            capture_output=True,
+        )
+        (repo_dir / "README.md").write_text("seed\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo_dir), "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_dir),
+                "-c",
+                "user.name=test",
+                "-c",
+                "user.email=test@example.com",
+                "commit",
+                "-m",
+                "init",
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        commit_sha = publish_screenshots(
+            output_dir=self.output_dir,
+            branch="refs/screenshots/latest",
+            run_dir="runs/100-1",
+            repo_dir=repo_dir,
+        )
+        self.assertEqual(len(commit_sha), 40)
+
+        files = subprocess.check_output(
+            ["git", "-C", str(remote_dir), "ls-tree", "-r", "--name-only", "refs/screenshots/latest"],
+            text=True,
+        ).splitlines()
+        for name in SCREENS:
+            self.assertIn(f"runs/100-1/{name}.png", files)
+        self.assertIn("runs/100-1/index.html", files)
+        self.assertNotIn("README.md", files)
+
+        heads = subprocess.check_output(
+            ["git", "-C", str(remote_dir), "for-each-ref", "--format=%(refname)", "refs/heads/"],
+            text=True,
+        ).splitlines()
+        self.assertEqual(heads, [])
 
 
 if __name__ == "__main__":

@@ -3,9 +3,11 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 
 
@@ -80,20 +82,238 @@ def package_screenshots(attachments_dir: Path, output_dir: Path) -> None:
     )
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("result_bundle", type=Path)
-    parser.add_argument("output_dir", type=Path)
-    args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="carbon-screenshots-") as temporary:
-        attachments_dir = Path(temporary)
+def publish_screenshots(
+    output_dir: Path,
+    branch: str = "refs/screenshots/latest",
+    run_dir: str = "latest",
+    repo_dir: Path = Path("."),
+) -> str:
+    """Publish exported PNG screenshots to a hidden git ref and return the commit SHA."""
+    missing = [name for name in SCREENS if not (output_dir / f"{name}.png").is_file()]
+    if missing:
+        raise ValueError(f"Missing exported screenshots in {output_dir}: {', '.join(missing)}")
+
+    target_ref = branch if branch.startswith("refs/") else f"refs/screenshots/{branch}"
+    clean_run_dir = run_dir.strip("/") or "latest"
+    with tempfile.TemporaryDirectory(prefix="carbon-publish-") as temporary:
+        worktree = Path(temporary) / "worktree"
         subprocess.run(
-            ["xcrun", "xcresulttool", "export", "attachments", "--path", str(args.result_bundle),
-             "--output-path", str(attachments_dir)],
+            ["git", "-C", str(repo_dir), "worktree", "add", "--detach", str(worktree)],
             check=True,
         )
-        package_screenshots(attachments_dir, args.output_dir)
-    print(f"Exported {len(SCREENS)} PNG screenshots and index.html to {args.output_dir}")
+        try:
+            subprocess.run(
+                ["git", "-C", str(worktree), "checkout", "--orphan", "ci-screenshots"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(worktree), "rm", "-rf", "--ignore-unmatch", "."],
+                check=True,
+            )
+            target = worktree / clean_run_dir
+            target.mkdir(parents=True, exist_ok=True)
+            for name in SCREENS:
+                filename = f"{name}.png"
+                shutil.copyfile(output_dir / filename, target / filename)
+            if (output_dir / "index.html").is_file():
+                shutil.copyfile(output_dir / "index.html", target / "index.html")
+
+            subprocess.run(["git", "-C", str(worktree), "add", "-A"], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(worktree),
+                    "-c",
+                    "user.name=github-actions[bot]",
+                    "-c",
+                    "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+                    "commit",
+                    "-m",
+                    f"Publish UI screenshots ({clean_run_dir})",
+                ],
+                check=True,
+            )
+            commit_sha = subprocess.check_output(
+                ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(worktree),
+                    "push",
+                    "origin",
+                    f"HEAD:{target_ref}",
+                    "--force",
+                ],
+                check=True,
+            )
+            return commit_sha
+        finally:
+            subprocess.run(
+                ["git", "-C", str(repo_dir), "worktree", "remove", "--force", str(worktree)],
+                check=False,
+            )
+
+
+def render_summary(
+    base_image_url: str | None = None,
+    artifact_url: str | None = None,
+    columns: int = 3,
+) -> str:
+    """Render a GitHub Actions job summary with inline screenshots and artifact links."""
+    lines = [
+        "## UI Screenshots",
+        "",
+        "Screenshots of all major screens captured from iOS Simulator:",
+        "",
+    ]
+    if base_image_url:
+        base = base_image_url.rstrip("/")
+        items = list(SCREENS.items())
+        for row_index in range(0, len(items), columns):
+            chunk = items[row_index : row_index + columns]
+            padded = chunk + [("", "")] * (columns - len(chunk))
+            if row_index == 0:
+                headers = [title if title else " " for _, title in padded]
+                lines.append("| " + " | ".join(headers) + " |")
+                lines.append("| " + " | ".join([":---:"] * columns) + " |")
+            else:
+                headers = [f"**{title}**" if title else " " for _, title in padded]
+                lines.append("| " + " | ".join(headers) + " |")
+
+            cells = []
+            for name, title in padded:
+                if name:
+                    img_url = f"{base}/{name}.png?raw=true"
+                    cells.append(
+                        f'<a href="{img_url}"><img src="{img_url}" alt="{title}" width="220"></a>'
+                    )
+                else:
+                    cells.append(" ")
+            lines.append("| " + " | ".join(cells) + " |")
+        lines.append("")
+    else:
+        for name, title in SCREENS.items():
+            lines.append(f"- **{name}.png** - {title}")
+        lines.append("")
+
+    if artifact_url:
+        lines.extend([
+            f"Download [Carbon-UI-Screenshots]({artifact_url}), extract the ZIP, and open "
+            "**index.html** in any browser. The PNG files can also be viewed or shared individually. "
+            "Raw Xcode results are available separately in **Carbon-UI-Test-Results**.",
+            "",
+        ])
+    return "\n".join(lines)
+
+
+def write_summary(
+    summary_file: Path,
+    base_image_url: str | None = None,
+    artifact_url: str | None = None,
+) -> None:
+    content = render_summary(base_image_url=base_image_url, artifact_url=artifact_url)
+    with summary_file.open("a", encoding="utf-8") as handle:
+        handle.write(content)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        type=Path,
+        help="Either '<result_bundle> <output_dir>' or '<output_dir>' when already exported.",
+    )
+    parser.add_argument(
+        "--publish-branch",
+        "--publish-ref",
+        dest="publish_branch",
+        help="Git ref (outside refs/heads/*) to force-push exported PNGs to for inline CI summary rendering.",
+    )
+    parser.add_argument(
+        "--run-dir",
+        default="latest",
+        help="Subdirectory on the screenshot branch for this run (default: latest).",
+    )
+    parser.add_argument(
+        "--repo",
+        default=os.environ.get("GITHUB_REPOSITORY", ""),
+        help="GitHub 'owner/repo' slug (defaults to $GITHUB_REPOSITORY).",
+    )
+    parser.add_argument(
+        "--server-url",
+        default=os.environ.get("GITHUB_SERVER_URL", "https://github.com"),
+        help="GitHub server URL (defaults to $GITHUB_SERVER_URL or https://github.com).",
+    )
+    parser.add_argument(
+        "--base-image-url",
+        help="Explicit base URL where PNG screenshots are hosted.",
+    )
+    parser.add_argument(
+        "--artifact-url",
+        default=os.environ.get("SCREENSHOTS_URL", ""),
+        help="URL to the uploaded screenshot ZIP artifact.",
+    )
+    parser.add_argument(
+        "--summary-file",
+        type=Path,
+        help="Path to $GITHUB_STEP_SUMMARY to append the markdown summary to.",
+    )
+    args = parser.parse_args()
+
+    if len(args.paths) == 2:
+        result_bundle, output_dir = args.paths
+        with tempfile.TemporaryDirectory(prefix="carbon-screenshots-") as temporary:
+            attachments_dir = Path(temporary)
+            subprocess.run(
+                [
+                    "xcrun",
+                    "xcresulttool",
+                    "export",
+                    "attachments",
+                    "--path",
+                    str(result_bundle),
+                    "--output-path",
+                    str(attachments_dir),
+                ],
+                check=True,
+            )
+            package_screenshots(attachments_dir, output_dir)
+        print(f"Exported {len(SCREENS)} PNG screenshots and index.html to {output_dir}")
+    elif len(args.paths) == 1:
+        output_dir = args.paths[0]
+    else:
+        parser.error("Expected either '<result_bundle> <output_dir>' or '<output_dir>'")
+
+    base_image_url = args.base_image_url
+    if args.publish_branch:
+        clean_run_dir = args.run_dir.strip("/") or "latest"
+        try:
+            commit_sha = publish_screenshots(
+                output_dir=output_dir,
+                branch=args.publish_branch,
+                run_dir=clean_run_dir,
+            )
+            if not base_image_url and args.repo:
+                server = args.server_url.rstrip("/")
+                base_image_url = f"{server}/{args.repo}/blob/{commit_sha}/{clean_run_dir}"
+        except subprocess.CalledProcessError as exc:
+            print(
+                f"Warning: could not publish screenshots to ref {args.publish_branch}: {exc}",
+                file=sys.stderr,
+            )
+
+    if args.summary_file:
+        write_summary(
+            summary_file=args.summary_file,
+            base_image_url=base_image_url,
+            artifact_url=args.artifact_url or None,
+        )
+        print(f"Wrote screenshot summary to {args.summary_file}")
 
 
 if __name__ == "__main__":
