@@ -7,7 +7,8 @@ enum SyntheticRAWFixture {
     static let width = 320
     static let height = 128
 
-    static func data(orientation: UInt16 = 1, neutral: [Double] = [1, 1, 1]) -> Data {
+    static func data(orientation: UInt16 = 1, neutral: [Double] = [1, 1, 1],
+                     width: Int = SyntheticRAWFixture.width, height: Int = SyntheticRAWFixture.height) -> Data {
         typealias Entry = (tag: UInt16, type: UInt16, count: UInt32, bytes: Data)
         func short(_ tag: UInt16, _ value: UInt16) -> Entry {
             (tag, 3, 1, words([value]))

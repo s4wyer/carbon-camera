@@ -1,5 +1,6 @@
 import XCTest
 import CoreImage
+import ImageIO
 @testable import CarbonKit
 
 final class RAWDevelopmentTests: XCTestCase {
@@ -66,6 +67,17 @@ final class RAWDevelopmentTests: XCTestCase {
         for option in [CIRAWFilterOption.enableSharpening, .enableChromaticNoiseTracking]
             where raw.inputKeys.contains(option.rawValue) {
             XCTAssertEqual((raw.value(forKey: option.rawValue) as? NSNumber)?.boolValue, false)
+        }
+    }
+
+    func testFixtureDecoderDiagnostics() throws {
+        for (width, height) in [(320, 128), (320, 256), (640, 512), (1280, 1024)] {
+            let url = try fixture()
+            try SyntheticRAWFixture.data(width: width, height: height).write(to: url)
+            let source = CGImageSourceCreateWithURL(url as CFURL, nil)!
+            print("DNG diagnostic \(width)x\(height): type=\(String(describing: CGImageSourceGetType(source))) properties=\(String(describing: CGImageSourceCopyPropertiesAtIndex(source, 0, nil)))")
+            let raw = CIRAWFilter(imageURL: url)!
+            print("DNG diagnostic native=\(raw.nativeSize) versions=\(raw.supportedDecoderVersions) image=\(String(describing: raw.outputImage))")
         }
     }
 
