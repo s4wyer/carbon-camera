@@ -61,8 +61,9 @@ jobs:
           test -f "$APP/Assets.car" || { echo "::error::Assets.car missing from app bundle"; exit 1; }
           HALIDE=$(find "$APP/LUTs/halide" -name '*.ccube' 2>/dev/null | wc -l | tr -d ' ')
           NOFUSION=$(find "$APP/LUTs/nofusion" -name '*.lutbin' 2>/dev/null | wc -l | tr -d ' ')
-          echo "Bundled LUTs: halide=$HALIDE nofusion=$NOFUSION"
-          [ "$HALIDE" -eq 24 ] && [ "$NOFUSION" -eq 20 ] || { echo "::error::LUTs missing from app bundle"; exit 1; }
+          LAPSE=$(find "$APP/LUTs/lapse" -name '*.cube' 2>/dev/null | wc -l | tr -d ' ')
+          echo "Bundled LUTs: halide=$HALIDE nofusion=$NOFUSION lapse=$LAPSE"
+          [ "$HALIDE" -eq 24 ] && [ "$NOFUSION" -eq 20 ] && [ "$LAPSE" -eq 1 ] || { echo "::error::LUTs missing from app bundle"; exit 1; }
           du -sh "$APP"
           # A conventional ZIP with Payload at its root, with no AppleDouble data.
           (cd build/ipa && COPYFILE_DISABLE=1 /usr/bin/zip -qry -X ../Carbon-unsigned.ipa Payload)

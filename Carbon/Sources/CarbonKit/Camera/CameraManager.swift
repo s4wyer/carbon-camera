@@ -116,7 +116,8 @@ final class CameraManager: NSObject, ObservableObject {
         
         // Lapse §1: output allows quality; per-shot priority adapts to scene EV.
         photoOutput.maxPhotoQualityPrioritization = .quality
-        if let dimensions = Self.photoDimensions4x3(photoOutput.supportedPhotoDimensions).last {
+        // Lapse section 1: the device format supplies the dimension list; keep 4:3 and use the last.
+        if let dimensions = Self.photoDimensions4x3(device.activeFormat.supportedMaxPhotoDimensions).last {
             photoOutput.maxPhotoDimensions = dimensions
         }
 
@@ -366,9 +367,8 @@ final class CameraManager: NSObject, ObservableObject {
             supportedFlashModes: photoOutput.supportedFlashModes,
             sceneEV: currentSceneEV
         )
-        if let dimensions = Self.photoDimensions4x3(photoOutput.supportedPhotoDimensions).last {
-            settings.maxPhotoDimensions = dimensions
-        }
+        // Must not exceed the output's maxPhotoDimensions, which configureSession set from the same rule.
+        settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
         return settings
     }
 
