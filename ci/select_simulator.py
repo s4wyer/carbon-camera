@@ -5,7 +5,7 @@ import re
 import sys
 
 
-def select_simulator(output: str, ios_major: int = 26) -> str:
+def select_simulator(output: str, ios_major: int | None = None) -> str:
     available = False
     candidates = []
     for line in output.splitlines():
@@ -28,17 +28,18 @@ def select_simulator(output: str, ios_major: int = 26) -> str:
         if not re.fullmatch(r'\d+(?:\.\d+)*', version):
             continue
         version_tuple = tuple(map(int, version.split('.')))
-        if version_tuple[0] != ios_major:
+        if ios_major is not None and version_tuple[0] != ios_major:
             continue
         candidates.append((version_tuple, device_id))
     if not candidates:
-        raise ValueError(f'No eligible iOS {ios_major} iPhone simulator found in Xcode scheme destinations')
+        runtime = f'iOS {ios_major}' if ios_major is not None else 'iOS'
+        raise ValueError(f'No eligible {runtime} iPhone simulator found in Xcode scheme destinations')
     return max(candidates)[1]
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--ios-major', type=int, default=26)
+    parser.add_argument('--ios-major', type=int, help='Require this iOS major version; otherwise select the newest eligible runtime')
     args = parser.parse_args()
     try:
         print(select_simulator(sys.stdin.read(), args.ios_major))

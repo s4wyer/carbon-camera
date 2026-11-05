@@ -19,7 +19,7 @@ def destinations(*lines):
 class SimulatorSelectionTests(unittest.TestCase):
     def test_requires_ios_26_instead_of_first_available_runtime(self):
         output = destinations(destination(IOS_18, '18.2'), destination(IOS_26, '26.0'))
-        self.assertEqual(select_simulator(output), IOS_26)
+        self.assertEqual(select_simulator(output, ios_major=26), IOS_26)
 
     def test_prefers_latest_eligible_ios_26_and_handles_duplicates(self):
         output = destinations(
@@ -27,11 +27,11 @@ class SimulatorSelectionTests(unittest.TestCase):
             destination(IOS_26_NEWER, '26.2'),
             destination(IOS_26_NEWER, '26.2'),
         )
-        self.assertEqual(select_simulator(output), IOS_26_NEWER)
+        self.assertEqual(select_simulator(output, ios_major=26), IOS_26_NEWER)
 
     def test_does_not_silently_fall_back_to_ios_18(self):
         with self.assertRaisesRegex(ValueError, 'No eligible iOS 26'):
-            select_simulator(destinations(destination(IOS_18, '18.2')))
+            select_simulator(destinations(destination(IOS_18, '18.2')), ios_major=26)
 
     def test_ignores_ipads_other_platforms_and_placeholders(self):
         output = destinations(
@@ -55,6 +55,14 @@ class SimulatorSelectionTests(unittest.TestCase):
         self.assertEqual(
             select_simulator(destinations(destination(IOS_18, '18.2')), ios_major=18), IOS_18
         )
+
+    def test_can_select_newest_eligible_runtime_without_major_requirement(self):
+        output = destinations(destination(IOS_18, '18.2'), destination(IOS_26, '26.0'))
+        self.assertEqual(select_simulator(output, ios_major=None), IOS_26)
+
+    def test_accepts_available_older_runtime_when_no_major_is_required(self):
+        output = destinations(destination(IOS_18, '18.2'))
+        self.assertEqual(select_simulator(output, ios_major=None), IOS_18)
 
     def test_empty_output_fails_clearly(self):
         with self.assertRaises(ValueError):

@@ -29,7 +29,7 @@ set -euo pipefail
 case "$1" in
   -showdestinations)
     echo 'Available destinations for the "Carbon" scheme:'
-    echo '{{ platform:iOS Simulator, id:{DEVICE}, OS:26.2, name:iPhone 16 }}'
+    echo "{{ platform:iOS Simulator, id:{DEVICE}, OS:${{MOCK_IOS_VERSION:-26.2}}, name:iPhone 16 }}"
     ;;
   build-for-testing)
     echo build-start >> ../events
@@ -123,6 +123,11 @@ esac
         self.assertEqual(result.returncode, 42, result.stdout + result.stderr)
         self.assertNotIn('tests', events)
         self.assertEqual(events[-1], 'shutdown')
+
+    def test_accepts_eligible_runtime_on_older_runner_images(self):
+        result, events = self.run_runner(MOCK_IOS_VERSION='18.5')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('tests', events)
 
     def test_boot_failure_skips_tests_and_surfaces_log(self):
         result, events = self.run_runner(MOCK_BOOT_STATUS='43')
