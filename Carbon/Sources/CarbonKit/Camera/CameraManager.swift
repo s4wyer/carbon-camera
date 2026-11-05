@@ -337,7 +337,7 @@ final class CameraManager: NSObject, ObservableObject {
                     switch result {
                     case .success(let shot):
                         self.lastCapturedShot = shot
-                        self.currentSceneEV = shot.captureMetadata?.sceneEV ?? 8.0
+                        self.currentSceneEV = shot.captureMetadata.sceneEV.isFinite ? shot.captureMetadata.sceneEV : 8.0
                         RollStore.shared.addShot(shot.id)
                         self.logger.info("Captured shot \(shot.captureID) committed to journal")
                     case .failure(let error):

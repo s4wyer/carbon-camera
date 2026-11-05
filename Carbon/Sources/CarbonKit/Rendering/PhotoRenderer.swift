@@ -82,8 +82,10 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
             processedImage = try LapseRenderer.render(
                 croppedImage,
                 look: factory == "journal" ? .journal : .photoDefault,
-                sceneEV: shot.captureMetadata?.sceneEV ?? 8.0,
-                flash: shot.captureMetadata?.flashState == .on,
+                // Lapse section 2: EV 8.0 when the capture EV is unusable.
+                sceneEV: shot.captureMetadata.sceneEV.isFinite ? shot.captureMetadata.sceneEV : 8.0,
+                // flashState records the requested mode; only an explicit "on" is known to have fired.
+                flash: shot.captureMetadata.flashState == .on,
                 loadLUT: loadLUT
             )
         } else {
