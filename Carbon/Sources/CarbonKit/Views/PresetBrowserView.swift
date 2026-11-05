@@ -149,54 +149,42 @@ struct PresetBrowserView: View {
                 activePreset = preset
                 isPresented = false
             }) {
-                ZStack(alignment: .topTrailing) {
-                    PresetBoxArtView(preset: preset, isSelected: activePreset.presetID == preset.presetID)
-                    
-                    // Favorite heart button (separate hit target)
-                    Button(action: {
-                        favorites.toggleFavorite(preset)
-                    }) {
-                        Image(systemName: favorites.isFavorite(preset) ? "heart.fill" : "heart")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(favorites.isFavorite(preset) ? Color("Safelight") : Color("Receipt").opacity(0.6))
-                            .frame(width: 32, height: 32)
-                            .background(Color("Remjet").opacity(0.7))
-                            .clipShape(Circle())
-                    }
-                    .padding(8)
-                    .buttonStyle(.plain)
-                }
+                PresetBoxArtView(preset: preset, isSelected: activePreset.presetID == preset.presetID)
             }
             .buttonStyle(.plain)
             
-            // Preset info below card
-            VStack(alignment: .leading, spacing: 3) {
-                Text(preset.displayName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color("Receipt"))
-                    .lineLimit(1)
+            // Caption row: name + source on the left, favorite heart on the right (like preset-card-concepts.html)
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(preset.displayName)
+                        .font(.system(size: 14, weight: .bold, design: .default))
+                        .foregroundColor(Color("Receipt"))
+                        .lineLimit(1)
+                    
+                    Text(preset.sourceDisplayName)
+                        .font(.system(size: 11, weight: .regular, design: .default))
+                        .foregroundColor(Color("Receipt").opacity(0.65))
+                        .lineLimit(1)
+                }
                 
-                Text(preset.sourceDisplayName)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(Color("Receipt").opacity(0.6))
-                    .lineLimit(1)
+                Spacer()
                 
-                // Info button (separate hit target)
+                // Favorite heart toggle (clean icon button, no background circle)
                 Button(action: {
-                    showingPresetDetail = preset
+                    favorites.toggleFavorite(preset)
                 }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 10))
-                        Text("Details")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .foregroundColor(Color("Brass"))
-                    .padding(.top, 2)
+                    Image(systemName: favorites.isFavorite(preset) ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(favorites.isFavorite(preset) ? Color("Safelight") : Color("Receipt").opacity(0.5))
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 8)
+            .padding(.top, 10)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            showingPresetDetail = preset
         }
     }
 }

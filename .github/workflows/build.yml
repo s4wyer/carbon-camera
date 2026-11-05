@@ -105,16 +105,6 @@ jobs:
           path: Carbon/build/*.ipa
           if-no-files-found: error
           retention-days: 14
-
-      - name: Explain IPA download
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ### Import into Feather
-          Download the **Carbon-unsigned.ipa** artifact below, then **extract the downloaded ZIP**.
-          Import the **Carbon-unsigned.ipa inside it** into Feather and sign with your certificate.
-          Do not rename the GitHub artifact ZIP to `.ipa`: that ZIP contains the IPA, not `Payload/`.
-          The IPA has passed archive, bundle metadata, ARM64 iOS executable, icon, and resource checks.
-          EOF
           
       - name: Upload test results
         if: always()
@@ -217,7 +207,7 @@ jobs:
           SCREENSHOTS_URL: ${{ steps.screenshots.outputs.artifact-url }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<EOF
-          ## 📸 UI Screenshots
+          ## UI Screenshots
           
           Screenshots of all major screens captured from iOS Simulator:
           

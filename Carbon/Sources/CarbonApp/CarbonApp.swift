@@ -26,17 +26,19 @@ struct CarbonApp: App {
                             }
                     }
                 } else {
-                    switch coordinator.currentScreen {
-                    case .welcome:
-                        WelcomeView(coordinator: coordinator)
-                    case .camera:
-                        CameraView(coordinator: coordinator)
-                    case .rolls:
-                        RollsView(coordinator: coordinator)
-                    case .library:
-                        LibraryView(coordinator: coordinator)
-                    case .lab:
-                        LabView(coordinator: coordinator)
+                    WelcomeCameraTransition(coordinator: coordinator) {
+                        switch coordinator.currentScreen {
+                        case .welcome, .camera:
+                            // Prepare the preview under the welcome cover, but
+                            // activate capture only when the route is camera.
+                            CameraView(coordinator: coordinator)
+                        case .rolls:
+                            RollsView(coordinator: coordinator)
+                        case .library:
+                            LibraryView(coordinator: coordinator)
+                        case .lab:
+                            LabView(coordinator: coordinator)
+                        }
                     }
                 }
             }

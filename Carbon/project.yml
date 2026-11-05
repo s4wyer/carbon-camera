@@ -37,6 +37,10 @@ targets:
       - path: Resources/UITesting
         type: folder
         buildPhase: resources
+      # Preset card typefaces (SIL OFL 1.1; licenses ship alongside in the folder).
+      - path: Resources/Fonts
+        type: folder
+        buildPhase: resources
     info:
       path: Sources/CarbonApp/Info.plist
       properties:
@@ -63,6 +67,13 @@ targets:
           Only when you pair a nearby phone or watch as a remote.
         NSBonjourServices:
           - _carbon-remote._tcp
+        UIAppFonts:
+          - Fonts/Inter-SemiBold.ttf
+          - Fonts/InterTight-Light.ttf
+          - Fonts/InterTight-Black.ttf
+          - Fonts/SpaceMono-Regular.ttf
+          - Fonts/SpaceMono-Bold.ttf
+          - Fonts/ZenKakuGothicNew-Black.ttf
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UIStatusBarStyle: UIStatusBarStyleLightContent

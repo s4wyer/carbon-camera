@@ -33,6 +33,15 @@
     <array>
         <string>arm64</string>
     </array>
+    <key>UIAppFonts</key>
+    <array>
+        <string>Fonts/Inter-SemiBold.ttf</string>
+        <string>Fonts/InterTight-Light.ttf</string>
+        <string>Fonts/InterTight-Black.ttf</string>
+        <string>Fonts/SpaceMono-Regular.ttf</string>
+        <string>Fonts/SpaceMono-Bold.ttf</string>
+        <string>Fonts/ZenKakuGothicNew-Black.ttf</string>
+    </array>
     <key>NSCameraUsageDescription</key>
     <string>Carbon needs the camera so you can take photographs. Nothing is uploaded and no account is required.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>

@@ -19,6 +19,10 @@ final class AppCoordinator: ObservableObject {
     init() {
         // Check if user has previously granted camera permission
         self.cameraPermissionStatus = AVCaptureDevice.authorizationStatus(for: .video)
+
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--welcome-testing") { return }
+        #endif
         
         // Skip welcome if permission already granted
         if cameraPermissionStatus == .authorized {
@@ -28,15 +32,14 @@ final class AppCoordinator: ObservableObject {
     }
     
     func requestCameraAccess() {
+        // Navigate immediately, independently of the animation and system dialog.
+        guard currentScreen == .welcome else { return }
+        hasCompletedWelcome = true
+        currentScreen = .camera
+        guard cameraPermissionStatus == .notDetermined else { return }
         Task {
             let status = await AVCaptureDevice.requestAccess(for: .video)
-            await MainActor.run {
-                self.cameraPermissionStatus = status ? .authorized : .denied
-                if status {
-                    self.hasCompletedWelcome = true
-                    self.currentScreen = .camera
-                }
-            }
+            cameraPermissionStatus = status ? .authorized : .denied
         }
     }
     

@@ -27,9 +27,6 @@ final class CarbonUITests: XCTestCase {
         
         // Navigate to camera
         openCameraButton.tap()
-        let continueButton = app.buttons["Allow camera & continue"]
-        XCTAssertTrue(continueButton.waitForExistence(timeout: 5))
-        continueButton.tap()
 
         let permissionAlert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
         if permissionAlert.waitForExistence(timeout: 5) {
