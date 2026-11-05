@@ -1,4 +1,5 @@
 import CoreImage
+import CoreImage.CIFilterBuiltins
 import Foundation
 
 /// Effects shared by Carbon's preset path (PhotoRenderer) and the Lapse routes
@@ -60,9 +61,11 @@ enum FilmEffects {
     static func grain(_ image: CIImage, amount: Float, size: Float, seed: UInt32 = 0) -> CIImage {
         guard amount > 0.001, let tile = noiseTile(seed: seed) else { return image }
         let cell = CGFloat(max(1, size))
-        let noise = tile.samplingNearest()
-            .transformed(by: CGAffineTransform(scaleX: cell, y: cell))
-            .applyingFilter("CIAffineTile", parameters: [kCIInputTransformKey: NSValue(cgAffineTransform: .identity)])
+        // CIAffineTile repeats the cell; the typed filter avoids the UIKit-only NSValue initialiser.
+        let tiler = CIFilter.affineTile()
+        tiler.inputImage = tile.samplingNearest()
+        tiler.transform = CGAffineTransform(scaleX: cell, y: cell)
+        guard let noise = tiler.outputImage else { return image }
         let extent = image.extent
         let source = """
         kernel vec4 grainAdd(__sample s, __sample n, float k) {
