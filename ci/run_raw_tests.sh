@@ -21,8 +21,8 @@ let package = Package(
 )
 SWIFT
 
-for source in Models/Contracts Models/PresetParameters Models/FilmEffectParameters Models/MediaTimeCoding \
-    Rendering/CIContextProvider Rendering/RAWDevelopment Rendering/PhotoGeometry; do
+for source in Models/Contracts Models/PresetParameters Models/MediaTimeCoding \
+    Rendering/ToneChain Rendering/CIContextProvider Rendering/RAWDevelopment Rendering/PhotoGeometry; do
     cp "$ROOT/Carbon/Sources/CarbonKit/$source.swift" "$PACKAGE/Sources/CarbonKit/"
 done
 for test in SyntheticRAWFixture RAWDevelopmentTests; do
