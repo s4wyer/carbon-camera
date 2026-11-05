@@ -1,0 +1,48 @@
+name: Set up Carbon iOS build
+description: Pin Xcode, restore its compilation cache, and generate the app project.
+inputs:
+  sdk:
+    description: SDK used by this job (iphoneos or iphonesimulator).
+    required: true
+  cache-scope:
+    description: Separate cache namespace for archive, unit tests, or UI tests.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '26.3'
+
+    - name: Identify compiler cache
+      id: toolchain
+      shell: bash
+      env:
+        CACHE_SDK: ${{ inputs.sdk }}
+      run: |
+        set -euo pipefail
+        xcodebuild -version
+        echo "build=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+        echo "sdk=$(xcrun --sdk "$CACHE_SDK" --show-sdk-build-version)" >> "$GITHUB_OUTPUT"
+        echo "COMPILATION_CACHE_DIR=$GITHUB_WORKSPACE/Carbon/build/CompilationCache.noindex" >> "$GITHUB_ENV"
+
+    # Cache only content-addressed compiler outputs. Test results, archives, and
+    # timestamp-sensitive DerivedData are regenerated on each runner.
+    # A new SHA saves an updated snapshot; prefix restores reuse previous runs.
+    - name: Cache Xcode compilations
+      uses: actions/cache@v4
+      with:
+        path: Carbon/build/CompilationCache.noindex
+        key: xcode-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.build }}-${{ steps.toolchain.outputs.sdk }}-${{ inputs.cache-scope }}-${{ github.sha }}
+        restore-keys: |
+          xcode-cas-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.build }}-${{ steps.toolchain.outputs.sdk }}-${{ inputs.cache-scope }}-
+
+    - name: Install XcodeGen
+      shell: bash
+      run: brew install xcodegen
+
+    - name: Generate Xcode project
+      shell: bash
+      working-directory: Carbon
+      run: xcodegen generate

@@ -7,6 +7,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build iOS IPA
@@ -16,46 +20,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Set up iOS archive
+        uses: ./.github/actions/setup-ios
         with:
-          xcode-version: 'latest'
-
-      - name: Install XcodeGen
-        run: |
-          brew install xcodegen
-          
-      - name: Generate Xcode project
-        run: |
-          cd Carbon
-          xcodegen generate
-          
-      - name: Run iOS tests
-        run: |
-          set -euo pipefail
-          cd Carbon
-          xcodebuild -version
-
-          # Pick a concrete simulator that actually exists on this runner image
-          DEST=$(xcrun simctl list devices available | grep -E '^ +iPhone' | head -1 | sed -E 's/.*\(([0-9A-Fa-f-]{36})\).*/\1/')
-          echo "Selected simulator: ${DEST:-<none>}"
-
-          if [ -n "$DEST" ]; then
-            TARGET="platform=iOS Simulator,id=$DEST"
-          else
-            TARGET="generic/platform=iOS Simulator"
-          fi
-
-          rm -rf ./build/TestResults.xcresult
-          xcodebuild test \
-            -project Carbon.xcodeproj \
-            -scheme Carbon \
-            -destination "$TARGET" \
-            -only-testing:CarbonKitTests \
-            -derivedDataPath ./build/DerivedData \
-            -enableCodeCoverage YES \
-            -resultBundlePath ./build/TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
+          sdk: iphoneos
+          cache-scope: archive
           
       - name: Build and archive IPA
         run: |
@@ -67,7 +36,12 @@ jobs:
             -project Carbon.xcodeproj \
             -scheme Carbon \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath ./build/DerivedData \
             -archivePath ./build/Carbon.xcarchive \
+            -showBuildTimingSummary \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_ENABLE_DIAGNOSTIC_REMARKS=YES \
+            COMPILATION_CACHE_CAS_PATH="$COMPILATION_CACHE_DIR" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -105,13 +79,39 @@ jobs:
           path: Carbon/build/*.ipa
           if-no-files-found: error
           retention-days: 14
-          
+
+  unit-tests:
+    name: Run iOS unit tests
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up iOS unit tests
+        uses: ./.github/actions/setup-ios
+        with:
+          sdk: iphonesimulator
+          cache-scope: unit-tests
+
+      - name: Build and run iOS unit tests
+        run: bash ci/run_simulator_tests.sh CarbonKitTests TestResults
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Carbon-test-results
           path: Carbon/build/TestResults.xcresult
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload test phase logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-unit-test-logs
+          path: Carbon/build/TestResults-*.log
           if-no-files-found: warn
           retention-days: 14
 
@@ -147,37 +147,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Set up iOS UI tests
+        uses: ./.github/actions/setup-ios
         with:
-          xcode-version: 'latest'
-
-      - name: Install XcodeGen
-        run: |
-          brew install xcodegen
-          
-      - name: Generate Xcode project
-        run: |
-          cd Carbon
-          xcodegen generate
+          sdk: iphonesimulator
+          cache-scope: ui-tests
           
       - name: Run UI Tests and Capture Screenshots
-        run: |
-          set -euo pipefail
-          cd Carbon
-          
-          # Select an iPhone simulator
-          DEST=$(xcrun simctl list devices available | grep -E '^ +iPhone' | head -1 | sed -E 's/.*\(([0-9A-Fa-f-]{36})\).*/\1/')
-          echo "Selected simulator: $DEST"
-          
-          # Run UI tests with screenshot attachments enabled
-          xcodebuild test \
-            -project Carbon.xcodeproj \
-            -scheme Carbon \
-            -destination "platform=iOS Simulator,id=$DEST" \
-            -only-testing:CarbonUITests \
-            -resultBundlePath ./build/UITestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
+        run: bash ci/run_simulator_tests.sh CarbonUITests UITestResults
       
       - name: Export PNG screenshots and browser gallery
         if: always()
@@ -200,6 +177,15 @@ jobs:
         with:
           name: Carbon-UI-Test-Results
           path: Carbon/build/UITestResults.xcresult
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload UI test phase logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-UI-test-logs
+          path: Carbon/build/UITestResults-*.log
           if-no-files-found: warn
           retention-days: 14
       

@@ -103,6 +103,19 @@ The app requires iOS 18.0 or later.
 CI validates the finished IPA's ZIP structure, bundle metadata, ARM64 device
 executable, primary icon PNGs, and bundled resources before uploading it.
 
+The archive, iOS unit tests, UI screenshots, and Python verification run as
+independent jobs. An IPA can be downloaded before tests finish; check all four
+jobs before treating that commit as verified. New runs cancel older runs of this
+workflow on the same branch or pull request.
+
+The macOS jobs pin Xcode 26.3 and cache its content-addressed compilation outputs
+by compiler build, SDK build, runner architecture, and job. Each commit saves an
+updated cache snapshot; a cold cache still builds normally. Unit and UI tests
+boot one eligible iOS 26 iPhone simulator while `build-for-testing` compiles,
+then use `test-without-building` on that same simulator. Each test job's summary
+reports destination selection, compilation, the remaining simulator wait, and
+test execution times. Phase logs are also uploaded for startup diagnostics.
+
 ### Building locally
 
 1. Transfer this repository to Mac with Xcode 16+.
