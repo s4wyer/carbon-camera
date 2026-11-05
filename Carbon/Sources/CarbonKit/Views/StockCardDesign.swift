@@ -7,9 +7,19 @@ struct StockCardDesign {
     struct Palette {
         let ground: Color
         let block: Color
+        let secondary: Color
         let ink: Color
         let accent: Color
         let metallic: Bool
+
+        init(ground: Color, block: Color, secondary: Color? = nil, ink: Color, accent: Color, metallic: Bool) {
+            self.ground = ground
+            self.block = block
+            self.secondary = secondary ?? block
+            self.ink = ink
+            self.accent = accent
+            self.metallic = metallic
+        }
     }
 
     enum Layout: Int, CaseIterable {
@@ -29,8 +39,8 @@ struct StockCardDesign {
         "halide-dawn": .init(ground: hex("E88969"), block: hex("643A70"), ink: hex("241827"), accent: hex("F5D9A2"), metallic: false),
         "halide-elysia": .init(ground: hex("D8D36E"), block: hex("39735B"), ink: hex("20251B"), accent: hex("F0E5C4"), metallic: false),
         "halide-onyx": .init(ground: hex("17191B"), block: hex("777D80"), ink: hex("F3F2EC"), accent: hex("F0401F"), metallic: true),
-        "lapse-journal": .init(ground: hex("172A43"), block: hex("F4C842"), ink: hex("F8F1E3"), accent: hex("F0401F"), metallic: false),
-        "lapse-photo-default": .init(ground: hex("E8E1D2"), block: hex("C43E36"), ink: hex("20201D"), accent: hex("315B69"), metallic: false),
+        "lapse-journal": .init(ground: hex("172A43"), block: hex("F4C842"), secondary: hex("E45B48"), ink: hex("F8F1E3"), accent: hex("F0401F"), metallic: false),
+        "lapse-photo-default": .init(ground: hex("E8E1D2"), block: hex("C43E36"), secondary: hex("286F78"), ink: hex("20201D"), accent: hex("315B69"), metallic: false),
         "nofusion-nn": .init(ground: hex("D5C7A8"), block: hex("3E6658"), ink: hex("20231F"), accent: hex("F0401F"), metallic: false),
         "nofusion-nc": .init(ground: hex("DBD4C5"), block: hex("536C73"), ink: hex("20211F"), accent: hex("F0401F"), metallic: false),
         "nofusion-cc": .init(ground: hex("E1C8A5"), block: hex("344F64"), ink: hex("20211F"), accent: hex("F0401F"), metallic: false),
@@ -60,9 +70,9 @@ struct StockCardDesign {
     /// Assignment is derived from stable presetID order, not randomized Hasher or list position.
     /// The cyclic sequence guarantees every adjacent pair differs.
     static func layout(for preset: PresetDefinition) -> Layout {
-        let family = PresetLibrary.all.filter { sameBrand($0, preset) }.sorted { $0.presetID < $1.presetID }
-        let index = family.firstIndex { $0.presetID == preset.presetID } ?? 0
-        return Layout.allCases[index % Layout.allCases.count]
+        // Catalog numbers are immutable preset identity, so layout variation is
+        // stable across filtering and reordering while adjacent catalog entries vary.
+        return Layout.allCases[(max(1, preset.catalogNumber) - 1) % Layout.allCases.count]
     }
 
     static func sameBrand(_ lhs: PresetDefinition, _ rhs: PresetDefinition) -> Bool {

@@ -16,7 +16,7 @@ final class PhotoRendererTests: XCTestCase {
         super.tearDown()
     }
 
-    private func makeRecipe() -> RecipeVersion {
+    private func makeRecipe(crop: RecipeVersion.Crop? = nil) -> RecipeVersion {
         RecipeVersion(
             recipeID: "renderer-test",
             presetDefinitionID: UUID(),
@@ -30,12 +30,13 @@ final class PhotoRendererTests: XCTestCase {
                 tintOffset: 0,
                 contrastAmount: 1,
                 saturationAmount: 1
-            )
+            ),
+            crop: crop
         )
     }
 
-    private func makeShot(sourceURL: URL? = nil) -> Shot {
-        let recipe = makeRecipe()
+    private func makeShot(sourceURL: URL? = nil, crop: RecipeVersion.Crop? = nil) -> Shot {
+        let recipe = makeRecipe(crop: crop)
         let sources: [SourceResource] = sourceURL.map {
             [SourceResource(
                 captureID: "renderer-test",
@@ -69,7 +70,7 @@ final class PhotoRendererTests: XCTestCase {
         )
     }
 
-    private func makePNG() throws -> URL {
+    private func makePNG(width: Int = 8, height: Int = 8) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("carbon-render-test-\(UUID().uuidString).png")
         temporaryURLs.append(url)
@@ -77,10 +78,10 @@ final class PhotoRendererTests: XCTestCase {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let context = CGContext(
             data: nil,
-            width: 8,
-            height: 8,
+            width: width,
+            height: height,
             bitsPerComponent: 8,
-            bytesPerRow: 8 * 4,
+            bytesPerRow: width * 4,
             space: colorSpace,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ), let image = context.makeImage(),
@@ -179,6 +180,24 @@ final class PhotoRendererTests: XCTestCase {
         XCTAssertEqual(revision.outputHash.count, 64)
         XCTAssertTrue(FileManager.default.fileExists(atPath: revision.outputURL.path))
         try? FileManager.default.removeItem(at: revision.outputURL)
+    }
+
+    func testRendererEncodesTwoByThreeCrop() async throws {
+        guard let renderer = PhotoRenderer() else {
+            throw XCTSkip("Metal is unavailable on this test device")
+        }
+        let sourceURL = try makePNG(width: 72, height: 96)
+        let crop = try XCTUnwrap(PhotoAspectRatio.twoByThree.crop(for: CGSize(width: 72, height: 96)))
+        let revision = try await renderer.render(
+            shot: makeShot(sourceURL: sourceURL, crop: crop),
+            preset: preset,
+            parameters: PresetParameters(),
+            cancellation: RenderCancellationToken()
+        )
+        temporaryURLs.append(revision.outputURL)
+        let output = try XCTUnwrap(CIImage(contentsOf: revision.outputURL))
+        XCTAssertEqual(output.extent.width, 64)
+        XCTAssertEqual(output.extent.height, 96)
     }
 
     func testRendererPreviewUsesBackgroundRenderQueue() async throws {

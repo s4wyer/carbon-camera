@@ -9,10 +9,9 @@ import SwiftUI
 /// intentionally does not silently substitute system fonts.
 enum CarbonFont {
     static func inter(size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        if weight == .semibold || weight == .bold || weight == .heavy || weight == .black {
-            return .custom("Inter-SemiBold", size: size)
-        }
-        return .system(size: size, weight: weight, design: .default)
+        // Stock UI must remain deterministic on device and in snapshots. The
+        // bundled semibold face is the only Inter cut shipped by this target.
+        return .custom("Inter-SemiBold", size: size)
     }
 
     /// Fixed bundled face for Stock artwork, avoiding system-font substitution.

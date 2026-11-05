@@ -77,7 +77,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         try cancellation.throwIfCancelled()
 
         let processedImage = try applyToneChain(
-            to: sourceImage,
+            to: PhotoGeometry.applying(shot.currentRecipe.crop, to: sourceImage),
             parameters: parameters,
             cancellation: cancellation
         )
@@ -136,13 +136,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         // Priority 1: Check primary SourceResource URL
         for source in shot.sources {
             if FileManager.default.fileExists(atPath: source.mediaURL.path) {
-                if source.type == .rawBayer {
-                    // CIRAWFilter decodes Apple DNG / Bayer RAW
-                    if let rawFilter = CIRAWFilter(imageURL: source.mediaURL) {
-                        return rawFilter.outputImage
-                    }
-                }
-                return CIImage(contentsOf: source.mediaURL)
+                return PhotoGeometry.sourceImage(at: source.mediaURL)
             }
         }
         
@@ -150,14 +144,11 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         let journal = CaptureJournal.shared
         let candidateHEIC = journal.fileURL(for: "\(shot.captureID).heic")
         if FileManager.default.fileExists(atPath: candidateHEIC.path) {
-            return CIImage(contentsOf: candidateHEIC)
+            return PhotoGeometry.sourceImage(at: candidateHEIC)
         }
         let candidateDNG = journal.fileURL(for: "\(shot.captureID).dng")
         if FileManager.default.fileExists(atPath: candidateDNG.path) {
-            if let rawFilter = CIRAWFilter(imageURL: candidateDNG) {
-                return rawFilter.outputImage
-            }
-            return CIImage(contentsOf: candidateDNG)
+            return PhotoGeometry.sourceImage(at: candidateDNG)
         }
         
         return nil

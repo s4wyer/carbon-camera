@@ -101,11 +101,11 @@ struct FilmFlapView: View {
                 // ── Credits ───────────────────────────────────────────────
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Carbon draws on the work of Halide, Lapse, and No Fusion — three apps that pushed what iPhone photography means. The presets marked Stolen Goods are honest reconstructions from their recovered assets. Some of what makes Carbon work, we learned from reading their code.")
+                        Text("Carbon owes a lot to Halide, Lapse, and No Fusion. They spent years figuring out what good iPhone photos look like. We spent a few evenings taking their apps apart. The evidence is in Stock.")
                             .font(.caption)
                             .foregroundStyle(Color("SecondaryInk"))
                         
-                        Text("Built with respect, not malice.")
+                        Text("Thanks for the presets. See you in court.")
                             .font(.caption.italic())
                             .foregroundStyle(Color("SecondaryInk"))
                     }

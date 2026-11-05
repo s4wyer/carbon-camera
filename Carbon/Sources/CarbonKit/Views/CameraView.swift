@@ -1,11 +1,11 @@
 // U01, C10, U07, C07, U02, U03, R08, B10 — Full-Screen Camera Interface
-// Matches Screen 02 mockup pixel-for-pixel
+// Optical-style layout based on the supplied viewfinder improvement mockup.
 
 import SwiftUI
 import AVFoundation
 import CoreMotion
 
-/// 02 CAMERA: Photo-first viewfinder with tactile shutter, prime selector, and rotary MOOD dial
+/// Photo-first viewfinder with a tactile shutter, prime selector, and exposure control.
 struct CameraView: View {
     @ObservedObject var coordinator: AppCoordinator
     @StateObject private var cameraManager = CameraManager()
@@ -28,60 +28,42 @@ struct CameraView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Top header bar (over preview)
+                // Quiet header: preset, flash, and settings stay outside the image.
                 HStack(alignment: .center) {
-                    // Tapping the preset name opens the preset menu
                     Button(action: { showPresetMenu = true }) {
-                        HStack(spacing: 6) {
-                            Text(activePreset.displayName.uppercased())
-                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        HStack(spacing: 9) {
+                            Text(activePreset.displayName)
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(Color("Receipt"))
-                                .tracking(1.5)
-                            
                             Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(Color("Receipt").opacity(0.6))
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color("Receipt").opacity(0.62))
                         }
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 10)
-                        .background(Color("Receipt").opacity(0.08))
-                        .clipShape(Capsule())
                     }
                     .accessibilityIdentifier("preset-name-button")
-                    
                     Spacer()
-                    
-                    // Right: Flash toggle + Settings button
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            cameraManager.cycleFlashMode()
-                        }) {
+                    HStack(spacing: 20) {
+                        Button(action: { cameraManager.cycleFlashMode() }) {
                             Image(systemName: flashIcon)
-                                .font(.system(size: 14))
-                                .foregroundColor(cameraManager.activeFlashMode == .on ? Color("Safelight") : Color("Receipt").opacity(0.8))
-                                .frame(width: 36, height: 36)
-                                .background(Color("Receipt").opacity(0.08))
-                                .clipShape(Circle())
+                                .font(.system(size: 21, weight: .medium))
+                                .foregroundColor(cameraManager.activeFlashMode == .on ? Color("Safelight") : Color("Receipt").opacity(0.9))
+                                .frame(width: 30, height: 40)
                         }
-                        
-                        Button(action: {
-                            showSettings = true
-                        }) {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color("Receipt").opacity(0.8))
-                                .frame(width: 36, height: 36)
-                                .background(Color("Receipt").opacity(0.08))
-                                .clipShape(Circle())
+                        Button(action: { showSettings = true }) {
+                            Image(systemName: "circle.dashed")
+                                .font(.system(size: 22, weight: .medium))
+                                .foregroundColor(Color("Receipt").opacity(0.9))
+                                .frame(width: 34, height: 40)
                         }
+                        .accessibilityLabel("Settings")
                         .accessibilityIdentifier("settings-button")
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.horizontal, 38)
+                .padding(.top, 10)
                 .padding(.bottom, 12)
-                
-                // Viewfinder area (dominant photographic center)
+
+                // Rounded optical-style viewfinder with a restrained double rim.
                 ZStack {
                     CameraPreviewView(session: cameraManager.session)
                         .overlay {
@@ -120,121 +102,137 @@ struct CameraView: View {
                             }
                         }
                         .clipped()
+                        .contentShape(Rectangle())
                         .gesture(
                             DragGesture(minimumDistance: 10)
                                 .onChanged { val in
-                                    // Vertical preview swipe adjusts exposure bias
                                     let deltaEV = Float(-val.translation.height / 150.0)
                                     exposureEV = max(-2.0, min(2.0, deltaEV))
                                     cameraManager.setExposureBias(exposureEV)
                                 }
                         )
                         .onTapGesture { location in
-                            // Tap to focus and expose (U05)
                             cameraManager.setFocusAndExposure(at: location)
                         }
-                    
-                    // Corner brightlines (U07) + Level indicator (U06)
-                    CornerBrightlinesView()
+
                     if levelDetector.isLevel {
                         Rectangle()
-                            .fill(Color.white.opacity(0.7))
-                            .frame(width: 20, height: 1)
+                            .fill(Color.white.opacity(0.72))
+                            .frame(width: 28, height: 1)
                             .transition(.opacity)
                     }
                 }
-                .aspectRatio(3.0 / 4.0, contentMode: .fit)
-                .padding(.horizontal, 16)
-                
-                Spacer()
-                
-                // Bottom control deck
-                VStack(spacing: 24) {
-                    // Focal length selector: 24 / (35) / 50 pills (C10)
-                    HStack(spacing: 32) {
+                .aspectRatio(cameraManager.activeAspectRatio.portraitRatio, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 42, style: .continuous))
+                .padding(5)
+                .background {
+                    RoundedRectangle(cornerRadius: 47, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 42, style: .continuous)
+                        .stroke(Color.black.opacity(0.9), lineWidth: 5)
+                        .padding(5)
+                        .allowsHitTesting(false)
+                }
+                .padding(.horizontal, 20)
+                .layoutPriority(1)
+
+                Spacer(minLength: 14)
+
+                // Focal length strip and aspect-ratio shortcut.
+                HStack(alignment: .center) {
+                    HStack(spacing: 22) {
                         focalButton(24)
                         focalButton(35)
                         focalButton(50)
                     }
-                    .padding(.top, 8)
-                    
-                    // Shutter deck row
-                    HStack(alignment: .center) {
-                        // Left: Roll shortcut (last captured thumbnail → Rolls view)
-                        Button(action: {
-                            coordinator.navigateTo(.rolls)
-                        }) {
-                            ZStack(alignment: .bottomTrailing) {
-                                if let thumb = lastShotThumbnail {
-                                    Image(uiImage: thumb)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 48, height: 48)
-                                        .clipped()
-                                        .cornerRadius(4)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color.white.opacity(0.12))
-                                        .frame(width: 48, height: 48)
-                                        .overlay(
-                                            Image(systemName: "film")
-                                                .font(.system(size: 16))
-                                                .foregroundColor(.white.opacity(0.5))
-                                        )
-                                }
-                                
-                                // Frame count badge
-                                if let active = RollStore.shared.activeRoll, active.frameCount > 0 {
-                                    Text("\(active.frameCount)")
-                                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                        .foregroundColor(Color("Remjet"))
-                                        .padding(.horizontal, 3)
-                                        .padding(.vertical, 1)
-                                        .background(Color("Receipt"))
-                                        .cornerRadius(2)
-                                        .offset(x: 2, y: 2)
-                                }
-                            }
+                    Spacer()
+                    Button {
+                        cameraManager.activeAspectRatio = cameraManager.activeAspectRatio == .twoByThree ? .threeByFour : .twoByThree
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "rectangle.portrait")
+                                .font(.system(size: 18, weight: .regular))
+                            Text(cameraManager.activeAspectRatio.rawValue)
+                                .font(.system(size: 17, weight: .medium))
                         }
-                        .accessibilityIdentifier("rolls-button")
-                        .accessibilityValue(lastShotThumbnail == nil ? "No photo" : "Photo available")
-                        .frame(width: 60)
-                        
-                        Spacer()
-                        
-                        // Center: 72pt tactile shutter button (C04)
-                        Button(action: {
-                            triggerShutter()
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.white, lineWidth: 3.5)
-                                    .frame(width: 74, height: 74)
-                                
-                                Circle()
-                                    .fill(Color("Receipt"))
-                                    .frame(width: 62, height: 62)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        // Right: Exposure compensation control (-2 to +2 EV)
-                        VStack(spacing: 4) {
-                            ExposureEVControl(value: $exposureEV) { newEV in
-                                cameraManager.setExposureBias(newEV)
-                            }
-                            
-                            Text(exposureEVText)
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundColor(exposureEV == 0 ? Color("Receipt").opacity(0.6) : Color("Brass"))
-                                .tracking(0.5)
-                        }
-                        .frame(width: 60)
+                        .foregroundColor(Color("Receipt"))
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 28)
+                    .accessibilityLabel("Aspect ratio \(cameraManager.activeAspectRatio.rawValue)")
+                    .accessibilityIdentifier("aspect-ratio-button")
                 }
+                .padding(.horizontal, 44)
+                .padding(.top, 16)
+                .padding(.bottom, 20)
+
+                // Compact capture deck: latest frame, tactile shutter, exposure.
+                HStack(alignment: .center) {
+                    Button(action: { coordinator.navigateTo(.rolls) }) {
+                        ZStack(alignment: .bottomTrailing) {
+                            if let thumb = lastShotThumbnail {
+                                Image(uiImage: thumb)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 54, height: 68)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+                            } else {
+                                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                                    .fill(Color.white.opacity(0.09))
+                                    .frame(width: 54, height: 68)
+                                    .overlay {
+                                        Image(systemName: "film")
+                                            .font(.system(size: 24, weight: .light))
+                                            .foregroundColor(.white.opacity(0.5))
+                                    }
+                            }
+                            if let active = RollStore.shared.activeRoll, active.frameCount > 0 {
+                                Text("\(active.frameCount)")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color("Remjet"))
+                                    .frame(minWidth: 34, minHeight: 34)
+                                    .background(Color("Receipt"), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .offset(x: 4, y: 4)
+                            }
+                        }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 17, style: .continuous)
+                                .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                        }
+                    }
+                    .accessibilityIdentifier("rolls-button")
+                    .accessibilityValue(lastShotThumbnail == nil ? "No photo" : "Photo available")
+                    .frame(width: 104, alignment: .leading)
+
+                    Spacer(minLength: 12)
+                    Button(action: { triggerShutter() }) {
+                        ZStack {
+                            Circle()
+                                .stroke(Color("Receipt"), lineWidth: 4)
+                                .frame(width: 84, height: 84)
+                            Circle()
+                                .fill(Color("Receipt"))
+                                .frame(width: 70, height: 70)
+                        }
+                        .contentShape(Circle())
+                    }
+                    .accessibilityLabel("Take photo")
+                    .accessibilityIdentifier("shutter-button")
+
+                    Spacer(minLength: 12)
+                    VStack(spacing: 8) {
+                        ExposureEVControl(value: $exposureEV) { newEV in
+                            cameraManager.setExposureBias(newEV)
+                        }
+                        Text(exposureEVText)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(exposureEV == 0 ? Color("Receipt").opacity(0.55) : Color("Brass"))
+                    }
+                    .frame(width: 74)
+                }
+                .padding(.horizontal, 38)
+                .padding(.bottom, 16)
             }
         }
         .task(id: cameraManager.lastCapturedShot?.id) {
@@ -309,22 +307,25 @@ struct CameraView: View {
         }
     }
     
-    @ViewBuilder
     private func focalButton(_ mm: Double) -> some View {
         let isSelected = selectedFocal == mm
-        Button(action: {
+        return Button(action: {
             selectedFocal = mm
             cameraManager.setFocalLength(mm)
         }) {
-            Text("\(Int(mm))")
-                .font(.system(size: 14, weight: isSelected ? .semibold : .regular, design: .default))
-                .foregroundColor(isSelected ? .white : .white.opacity(0.55))
-                .frame(width: 42, height: 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(isSelected ? Color.white.opacity(0.6) : Color.clear, lineWidth: 1)
-                )
+            VStack(spacing: 4) {
+                Text("\(Int(mm))")
+                    .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
+                    .foregroundColor(isSelected ? Color("Receipt") : Color("Receipt").opacity(0.42))
+                Circle()
+                    .fill(isSelected ? Color("Receipt") : Color.clear)
+                    .frame(width: 7, height: 7)
+            }
+            .frame(width: 62, height: 42)
+            .contentShape(Rectangle())
         }
+        .accessibilityLabel("\(Int(mm)) millimeter lens")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
     
     private func triggerShutter() {
@@ -341,23 +342,23 @@ struct CameraView: View {
 private struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
     
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
+    func makeUIView(context: Context) -> PreviewView {
+        let view = PreviewView(frame: .zero)
         view.backgroundColor = .black
-        let layer = AVCaptureVideoPreviewLayer(session: session)
-        layer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(layer)
-        
-        DispatchQueue.main.async {
-            layer.frame = view.bounds
-        }
+        view.previewLayer.session = session
+        view.previewLayer.videoGravity = .resizeAspectFill
         return view
     }
     
-    func updateUIView(_ uiView: UIView, context: Context) {
-        if let layer = uiView.layer.sublayers?.first as? AVCaptureVideoPreviewLayer {
-            layer.frame = uiView.bounds
-        }
+    func updateUIView(_ uiView: PreviewView, context: Context) {
+        uiView.previewLayer.session = session
+    }
+
+    /// A backing preview layer follows bounds changes when the format changes.
+    final class PreviewView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+
+        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     }
 }
 
@@ -405,28 +406,21 @@ private struct ExposureEVControl: View {
     let onChange: (Float) -> Void
     
     var body: some View {
-        ZStack {
-            // Background disc
-            Circle()
-                .fill(Color("Receipt").opacity(0.12))
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Circle()
-                        .stroke(value != 0 ? Color("Brass") : Color("Receipt").opacity(0.2), lineWidth: 1)
-                )
-            
-            // Icon indicating EV compensation (+/-)
-            Image(systemName: "plusminus")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(value != 0 ? Color("Brass") : Color("Receipt").opacity(0.7))
-        }
-        .onTapGesture {
-            // Tap to reset exposure to 0
+        Button {
+            // Tap to reset exposure to 0.
             if value != 0 {
                 value = 0
                 onChange(0)
             }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 26, weight: .regular))
+                .foregroundColor(value != 0 ? Color("Brass") : Color("Receipt"))
+                .frame(width: 46, height: 46)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(value == 0 ? "Exposure compensation, neutral" : "Reset exposure compensation")
     }
 }
 

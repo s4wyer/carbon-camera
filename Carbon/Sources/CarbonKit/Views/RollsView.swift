@@ -26,7 +26,7 @@ struct RollsView: View {
                                 .font(.system(size: 38, weight: .regular, design: .serif))
                                 .foregroundColor(Color("Receipt"))
                             if let active = rollStore.activeRoll {
-                                Text("Shooting · \(active.name) · \(active.frameCount) frames")
+                                Text("Shooting · \(active.name) · \(active.frameCount) \(active.frameCount == 1 ? "frame" : "frames")")
                                     .font(.system(size: 11, design: .monospaced))
                                     .foregroundColor(Color("Receipt").opacity(0.65))
                             }
@@ -190,7 +190,7 @@ private struct RollEnvelopeCard: View {
                                 .stroke(roll.state == .shooting ? Color("Safelight") : Color("Brass"), lineWidth: 1)
                         )
                     Spacer()
-                    Text("\(roll.frameCount) FRAMES")
+                    Text("\(roll.frameCount) \(roll.frameCount == 1 ? "FRAME" : "FRAMES")")
                         .font(.system(size: 9, weight: .medium, design: .monospaced))
                         .tracking(1.0)
                         .foregroundColor(Color("Receipt").opacity(0.65))
@@ -344,7 +344,7 @@ struct RollDetailView: View {
                                 Text(roll.name)
                                     .font(.system(size: 28, weight: .regular, design: .serif))
                                     .foregroundColor(Color("Receipt"))
-                                Text("\(roll.frameCount) frames · \(roll.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                                Text("\(roll.frameCount) \(roll.frameCount == 1 ? "frame" : "frames") · \(roll.createdAt.formatted(date: .abbreviated, time: .omitted))")
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundColor(Color("Receipt").opacity(0.5))
                             }

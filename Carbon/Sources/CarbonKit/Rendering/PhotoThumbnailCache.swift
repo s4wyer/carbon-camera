@@ -10,7 +10,7 @@ final class PhotoThumbnailCache: @unchecked Sendable {
     static let shared = PhotoThumbnailCache()
 
     private static let targetPixelSize = 512
-    private static let cacheVersion = "v2"
+    private static let cacheVersion = "v3"
 
     private let ciContext = CIContextProvider.shared
     private let cacheDirectory: URL
@@ -80,7 +80,7 @@ final class PhotoThumbnailCache: @unchecked Sendable {
             ]
             image = CGImageSourceCreateThumbnailAtIndex(sourceImage, 0, options as CFDictionary)
                 .map { UIImage(cgImage: $0) }
-        } else if let ciImage = CIImage(contentsOf: source.mediaURL) {
+        } else if let ciImage = PhotoGeometry.sourceImage(at: source.mediaURL) {
             let scale = CGFloat(Self.targetPixelSize) / max(ciImage.extent.width, ciImage.extent.height)
             let scaled = ciImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
             image = ciContext.createCGImage(scaled, from: scaled.extent).map { UIImage(cgImage: $0) }
@@ -89,9 +89,15 @@ final class PhotoThumbnailCache: @unchecked Sendable {
             return nil
         }
 
-        guard let image else {
+        guard var image else {
             logger.error("Failed to render thumbnail for \(shot.id)")
             return nil
+        }
+
+        if let crop = shot.currentRecipe.crop, let cgImage = image.cgImage {
+            let cropped = PhotoGeometry.applying(crop, to: CIImage(cgImage: cgImage))
+            guard let croppedCGImage = ciContext.createCGImage(cropped, from: cropped.extent) else { return nil }
+            image = UIImage(cgImage: croppedCGImage)
         }
 
         if let jpegData = image.jpegData(compressionQuality: 0.85) {
@@ -104,6 +110,6 @@ final class PhotoThumbnailCache: @unchecked Sendable {
         guard let source = shot.sources.first else { return nil }
         let sourceVersion = source.mediaHash.isEmpty ? source.mediaURL.path : source.mediaHash
         let safeVersion = sourceVersion.replacingOccurrences(of: "/", with: "_")
-        return "\(Self.cacheVersion)-\(shot.id.uuidString)-\(safeVersion)"
+        return "\(Self.cacheVersion)-\(shot.id.uuidString)-\(shot.currentRecipe.id.uuidString)-\(safeVersion)"
     }
 }

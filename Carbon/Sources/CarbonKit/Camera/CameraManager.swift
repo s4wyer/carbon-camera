@@ -21,6 +21,10 @@ final class CameraManager: NSObject, ObservableObject {
     @Published var isCapacitorReady: Bool = true
     @Published var activeFocalLength: Double = 35.0
     @Published var activeFlashMode: AVCaptureDevice.FlashMode = .auto
+    @Published var activeAspectRatio: PhotoAspectRatio =
+        PhotoAspectRatio(rawValue: UserDefaults.standard.string(forKey: "camera.aspectRatio") ?? "") ?? .twoByThree {
+        didSet { UserDefaults.standard.set(activeAspectRatio.rawValue, forKey: "camera.aspectRatio") }
+    }
     @Published var activeExposureEV: Float = 0.0
     @Published var activeWarmthK: Float = 0.0
     @Published var activePreset: PresetDefinition = PresetLibrary.defaultPreset ?? PresetLibrary.all[0]
@@ -296,6 +300,7 @@ final class CameraManager: NSObject, ObservableObject {
             isCapacitorReady = false
         }
         
+        let aspectRatio = activeAspectRatio
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
             let settings = self.buildPhotoSettings()
@@ -304,7 +309,8 @@ final class CameraManager: NSObject, ObservableObject {
             let delegate = PhotoCaptureDelegate(
                 captureID: captureID,
                 flashMode: self.activeFlashMode,
-                preset: self.activePreset
+                preset: self.activePreset,
+                aspectRatio: aspectRatio
             ) { [weak self] result in
                 guard let self = self else { return }
                 Task { @MainActor in
@@ -383,6 +389,7 @@ final class CameraManager: NSObject, ObservableObject {
     func captureWithSafety() {
         guard isSessionRunning else { return }
         
+        let aspectRatio = activeAspectRatio
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
             
@@ -394,7 +401,8 @@ final class CameraManager: NSObject, ObservableObject {
                 let delegate = PhotoCaptureDelegate(
                     captureID: captureID,
                     flashMode: self.activeFlashMode,
-                    preset: self.activePreset
+                    preset: self.activePreset,
+                    aspectRatio: aspectRatio
                 ) { [weak self] result in
                     guard let self = self else { return }
                     Task { @MainActor in
@@ -420,6 +428,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     private let captureID: String
     private let requestedFlashMode: AVCaptureDevice.FlashMode
     private let capturePreset: PresetDefinition
+    private let aspectRatio: PhotoAspectRatio
     private let completion: (Result<Shot, Error>) -> Void
     
     private var rawData: Data?
@@ -430,11 +439,13 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         captureID: String,
         flashMode: AVCaptureDevice.FlashMode,
         preset: PresetDefinition,
+        aspectRatio: PhotoAspectRatio,
         completion: @escaping (Result<Shot, Error>) -> Void
     ) {
         self.captureID = captureID
         self.requestedFlashMode = flashMode
         self.capturePreset = preset
+        self.aspectRatio = aspectRatio
         self.completion = completion
     }
     
@@ -496,6 +507,12 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
             do {
                 // Recipe built from the currently selected preset (U12 film flap)
                 let defaultPreset = self.capturePreset
+                let dimensions = rawData != nil ? resolvedSettings.rawPhotoDimensions : resolvedSettings.photoDimensions
+                let swapsAxes = (5...8).contains(captureMetadata?.orientation ?? 1)
+                let imageSize = CGSize(
+                    width: CGFloat(swapsAxes ? dimensions.height : dimensions.width),
+                    height: CGFloat(swapsAxes ? dimensions.width : dimensions.height)
+                )
                 let recipe = RecipeVersion(
                     recipeID: defaultPreset.presetID,
                     presetDefinitionID: defaultPreset.id,
@@ -509,7 +526,8 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                         tintOffset: 0.0,
                         contrastAmount: 1.0,
                         saturationAmount: 1.0
-                    )
+                    ),
+                    crop: aspectRatio.crop(for: imageSize)
                 )
                 
                 // Durable write to journal (SET04)

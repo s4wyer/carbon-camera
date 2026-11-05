@@ -3,6 +3,7 @@
 
 import Photos
 import UIKit
+import CoreImage
 import os.log
 
 enum ExportError: LocalizedError {
@@ -36,9 +37,27 @@ final class PhotoExporter {
             throw ExportError.noSource
         }
         
+        var temporaryURL: URL?
+        defer {
+            if let temporaryURL { try? FileManager.default.removeItem(at: temporaryURL) }
+        }
+
         let exportURL: URL
         if let render = shot.currentRender {
             exportURL = render.outputURL
+        } else if let crop = shot.currentRecipe.crop {
+            guard let image = PhotoGeometry.sourceImage(at: source.mediaURL) else {
+                throw ExportError.noSource
+            }
+            let cropped = PhotoGeometry.applying(crop, to: image)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("export-\(UUID().uuidString).jpg")
+            temporaryURL = url
+            try CIContextProvider.shared.writeJPEGRepresentation(
+                of: cropped, to: url,
+                colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                options: [:]
+            )
+            exportURL = url
         } else {
             exportURL = source.mediaURL
         }

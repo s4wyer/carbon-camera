@@ -1,10 +1,10 @@
-// Camera settings sheet: flash control and credits
+// Camera settings sheet: aspect ratio, flash control, and credits
 // Separated from preset selection per UX redesign
 
 import SwiftUI
 import AVFoundation
 
-/// Settings sheet: flash mode and app credits
+/// Settings sheet: photo format, flash mode, and app credits
 struct CameraSettingsView: View {
     @ObservedObject var cameraManager: CameraManager
     @Binding var isPresented: Bool
@@ -15,6 +15,23 @@ struct CameraSettingsView: View {
                 Color("Remjet").ignoresSafeArea()
                 
                 List {
+                    Section {
+                        Picker("Aspect ratio", selection: $cameraManager.activeAspectRatio) {
+                            ForEach(PhotoAspectRatio.allCases) { ratio in
+                                Text(ratio.rawValue).tag(ratio)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("aspect-ratio-picker")
+                        .listRowBackground(Color("Receipt").opacity(0.06))
+                    } header: {
+                        Text("Aspect ratio")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color("Brass"))
+                            .textCase(.uppercase)
+                            .tracking(1.2)
+                    }
+
                     // Flash control
                     Section {
                         ForEach([AVCaptureDevice.FlashMode.auto, .on, .off], id: \.self) { mode in
@@ -48,12 +65,12 @@ struct CameraSettingsView: View {
                     // Credits
                     Section {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Carbon draws on the work of Halide, Lapse, and No Fusion — three apps that pushed what iPhone photography means. The presets in the Stolen Goods collection are honest reconstructions from their recovered assets. Some of what makes Carbon work, we learned from reading their code.")
+                            Text("Carbon owes a lot to Halide, Lapse, and No Fusion. They spent years figuring out what good iPhone photos look like. We spent a few evenings taking their apps apart. The evidence is in Stock.")
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color("Receipt").opacity(0.85))
                                 .fixedSize(horizontal: false, vertical: true)
                             
-                            Text("Built with respect, not malice.")
+                            Text("Thanks for the presets. See you in court.")
                                 .font(.system(size: 13, weight: .medium))
                                 .italic()
                                 .foregroundStyle(Color("Brass"))

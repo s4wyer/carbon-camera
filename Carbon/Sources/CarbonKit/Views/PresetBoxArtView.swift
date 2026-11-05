@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Collectible Stock artwork. The four families share material and interaction,
 /// but each retains a deliberately different graphic language.
@@ -9,6 +10,7 @@ struct PresetBoxArtView: View {
     let motion: StockMotionManager
     let viewportHeight: CGFloat
     @State private var dragTilt: CGSize = .zero
+    @State private var cachedArtwork: UIImage?
 
     init(preset: PresetDefinition, isSelected: Bool, motion: StockMotionManager = .shared, viewportHeight: CGFloat = 600) {
         self.preset = preset
@@ -32,10 +34,36 @@ struct PresetBoxArtView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                art(size: proxy.size)
-                    .environment(\.dynamicTypeSize, .large)
-                    .offset(y: reduceMotion ? 0 : parallax(proxy.frame(in: .named("stockScroll")).midY))
+                Group {
+                    if let cachedArtwork {
+                        Image(uiImage: cachedArtwork)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+                    } else {
+                        art(size: proxy.size)
+                            .environment(\.dynamicTypeSize, .large)
+                    }
+                }
+                .offset(y: reduceMotion ? 0 : parallax(proxy.frame(in: .named("stockScroll")).midY))
+                .task(id: artworkKey(for: proxy.size)) {
+                    let key = artworkKey(for: proxy.size)
+                    cachedArtwork = nil
+                    // Yield once so the first grid frame can be committed before
+                    // ImageRenderer performs its one-time typography/layout work.
+                    await Task.yield()
+                    guard !Task.isCancelled else { return }
+                    let image = await StockArtworkCache.shared.render(
+                        key: key,
+                        size: proxy.size,
+                        content: art(size: proxy.size).environment(\.dynamicTypeSize, .large)
+                    )
+                    guard !Task.isCancelled, artworkKey(for: proxy.size) == key else { return }
+                    cachedArtwork = image
+                }
                 StockSheenView(motion: motion, strength: reduceMotion ? 0.10 : (isSelected ? 0.30 : (design.metallic ? 0.28 : 0.17)), fallbackTilt: dragTilt, reduceMotion: reduceMotion)
+                    .allowsHitTesting(false)
                 if isSelected {
                     VStack {
                         HStack {
@@ -68,6 +96,22 @@ struct PresetBoxArtView: View {
         .aspectRatio(1.25, contentMode: .fit)
     }
 
+    private func artworkKey(for size: CGSize) -> String {
+        let scale = Int(UIScreen.main.scale.rounded())
+        let width = Int((size.width * CGFloat(scale)).rounded())
+        let height = Int((size.height * CGFloat(scale)).rounded())
+        let paletteSignature = [design.ground, design.block, design.secondary, design.ink, design.accent]
+            .map(colorSignature).joined(separator: "-")
+        return StockArtworkCache.cacheVersion + ":" + preset.presetID + ":" + preset.displayName + ":" + preset.description + ":" + preset.engineVersion + ":" + preset.sourceDisplayName + ":" + String(preset.catalogNumber) + ":" + String(design.metallic) + ":" + paletteSignature + ":" + String(width) + "x" + String(height)
+    }
+
+    private func colorSignature(_ color: Color) -> String {
+        let value = UIColor(color)
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        value.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return "\(Int(red * 255))-\(Int(green * 255))-\(Int(blue * 255))-\(Int(alpha * 255))"
+    }
+
     private func parallax(_ midY: CGFloat) -> CGFloat {
         let normalized = (midY - viewportHeight * 0.5) / max(1, viewportHeight)
         return min(4, max(-4, normalized * -8))
@@ -87,20 +131,30 @@ struct PresetBoxArtView: View {
         return ZStack(alignment: .topLeading) {
             design.ground
             VStack(alignment: .leading, spacing: 0) {
-                Text("carbon").font(CarbonFont.stockInter(size: size.height * 0.085)).foregroundStyle(ink)
-                Rectangle().fill(Color(hex: "F0401F")).frame(width: size.width * 0.23, height: 2)
-                    .padding(.top, 3).padding(.bottom, 3)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("carbon").font(CarbonFont.stockInter(size: size.height * 0.075)).foregroundStyle(ink)
+                    Spacer(minLength: 4)
+                    Text("STOCK / \(catalogNumber)").font(CarbonFont.spaceMono(size: size.height * 0.045))
+                        .foregroundStyle(ink.opacity(0.72)).lineLimit(1).minimumScaleFactor(0.7)
+                }
+                Rectangle().fill(Color(hex: "F0401F")).frame(width: size.width * 0.19, height: 2)
+                    .padding(.top, 4).padding(.bottom, 4)
                 Text(preset.displayName.lowercased())
-                    .font(CarbonFont.stockInter(size: size.height * 0.052)).foregroundStyle(ink)
+                    .font(CarbonFont.stockInter(size: size.height * 0.062)).foregroundStyle(ink)
                     .lineLimit(2).minimumScaleFactor(0.72)
                 Spacer(minLength: 0)
-                Text(catalogNumber)
-                    .font(CarbonFont.interTightLight(size: size.height * 0.64))
-                    .tracking(-size.height * 0.04).foregroundStyle(ink)
-                    .lineLimit(1).minimumScaleFactor(0.55)
-                    .frame(maxWidth: size.width * 0.76, maxHeight: size.height * 0.60, alignment: .bottomLeading)
+                ZStack {
+                    Circle().stroke(ink.opacity(0.12), lineWidth: max(2, size.height * 0.025))
+                        .padding(size.height * 0.035).offset(x: 2, y: -2)
+                    Circle().stroke(.white.opacity(0.48), lineWidth: max(2, size.height * 0.025))
+                        .padding(size.height * 0.035).offset(x: -2, y: 2)
+                    Circle().fill(ink.opacity(0.82)).padding(size.height * 0.07)
+                }
+                .frame(width: min(size.width * 0.50, size.height * 0.58), height: size.height * 0.53)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(true)
             }
-            .padding(.leading, size.width * 0.07).padding(.top, size.height * 0.07).padding(.bottom, size.height * 0.02)
+            .padding(.horizontal, size.width * 0.07).padding(.top, size.height * 0.07).padding(.bottom, size.height * 0.04)
         }
     }
 
@@ -195,31 +249,27 @@ struct PresetBoxArtView: View {
     }
 
     private func lapse(_ size: CGSize) -> some View {
-        ZStack(alignment: .topLeading) {
+        let diameter = size.height * 1.12
+        return ZStack(alignment: .topLeading) {
             design.ground
-            Circle().fill(design.block).frame(width: size.height * (layout == .grid ? 1.25 : 1.42), height: size.height * (layout == .grid ? 1.25 : 1.42))
-                .offset(x: layout == .grid ? size.width * 0.68 : -size.width * 0.78,
-                        y: layout == .grid ? size.height * 0.43 : size.height * 0.48)
-            VStack(alignment: layout == .grid ? .leading : .trailing) {
-                HStack {
-                    Text("LAPSE").font(CarbonFont.stockInter(size: size.height * 0.095)).tracking(2).foregroundStyle(design.ink)
+            Circle().fill(design.block.opacity(0.84)).frame(width: diameter, height: diameter)
+                .offset(x: -size.width * 0.22, y: -size.height * 0.22)
+                .blendMode(.multiply)
+            Circle().fill(design.secondary.opacity(0.84)).frame(width: diameter, height: diameter)
+                .offset(x: size.width * 0.48, y: size.height * 0.20)
+                .blendMode(.multiply)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    Text("LAPSE").font(CarbonFont.stockInter(size: size.height * 0.085)).tracking(2).foregroundStyle(design.ink)
                     Spacer()
-                    if layout != .grid {
-                        Text(catalogNumber).font(CarbonFont.zenKakuBlack(size: size.height * 0.24)).foregroundStyle(design.ink)
-                    }
+                    Text(catalogNumber).font(CarbonFont.zenKakuBlack(size: size.height * 0.23)).foregroundStyle(design.ink)
                 }
                 Spacer()
-                if layout == .grid {
-                    Text(catalogNumber).font(CarbonFont.zenKakuBlack(size: size.height * 0.28))
-                        .foregroundStyle(StockCardDesign.contrastInk(for: design.block))
-                }
-                Text(preset.displayName.uppercased()).font(CarbonFont.zenKakuBlack(size: size.height * 0.17))
+                Text(preset.displayName.uppercased()).font(CarbonFont.zenKakuBlack(size: size.height * 0.15))
                     .foregroundStyle(design.ink).lineLimit(2).minimumScaleFactor(0.52)
-                    .frame(maxWidth: size.width * 0.64, alignment: layout == .grid ? .leading : .trailing)
+                    .frame(maxWidth: size.width * 0.68, alignment: .leading)
             }
-            .frame(width: size.width * 0.52)
-            .frame(maxHeight: .infinity, alignment: layout == .grid ? .leading : .trailing)
-            .padding(size.width * 0.07)
+            .padding(size.width * 0.07).padding(.vertical, size.height * 0.07)
         }.clipped()
     }
 

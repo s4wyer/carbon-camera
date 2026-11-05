@@ -175,7 +175,7 @@ public struct RecipeVersion: Codable, Identifiable {
     
     /// Crop and straighten applied at render time (immutable per recipe).
     public struct Crop: Codable {
-        public let sourceNormalized: CGRect  // 0..1 in source image space
+        public let sourceNormalized: CGRect  // 0..1 in upright source image space
         public let rotation: Float  // Degrees, applied before source crop
         public let straightenAngle: Float  // -45..+45 degrees, applied before rotation
     }
@@ -191,6 +191,7 @@ public struct RecipeVersion: Codable, Identifiable {
                 source: SourceResource.SourceType,
                 parameters: Parameters,
                 grainSeed: UInt32 = 0,
+                crop: Crop? = nil,
                 isEditable: Bool = true) {
         self.id = id
         self.recipeID = recipeID
@@ -199,7 +200,7 @@ public struct RecipeVersion: Codable, Identifiable {
         self.source = source
         self.parameters = parameters
         self.grainSeed = grainSeed
-        self.crop = nil
+        self.crop = crop
         self.isEditable = isEditable
     }
 }
@@ -325,6 +326,8 @@ public struct PresetDefinition: Codable, Identifiable, Equatable {
         self.carbonDeltas = carbonDeltas
         self.engineVersion = engineVersion
         self.displayOrder = displayOrder
+        // Existing catalog rows use their reserved brand range. New rows can pass
+        // an explicit number without changing the number of any existing preset.
         self.catalogNumber = catalogNumber ?? max(1, displayOrder % 100 + 1)
     }
 
