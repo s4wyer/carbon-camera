@@ -109,32 +109,9 @@ enum LapseRenderer {
     }
 
     private static func halation(_ image: CIImage) -> CIImage {
-        // Journal CI halation values were not recovered; use the documented shared Metal defaults (§7).
-        let backLuma = halationLayer(image, channel: 0, lower: 0.92, upper: 0.95,
-                                     sigma: 20, color: (0.9, 0.001, 0), intensity: 0.65)
-        let backRed = halationLayer(image, channel: 1, lower: 0.93, upper: 0.99,
-                                    sigma: 20, color: (0.9, 0.001, 0), intensity: 0.65)
-        let front = halationLayer(image, channel: 0, lower: 0.92, upper: 0.95,
-                                  sigma: 15, color: (0.99, 0.69, 0.24), intensity: 1)
-        let joined = output("CIAdditionCompositing", image: backLuma, values: [kCIInputBackgroundImageKey: backRed])
-        let layers = output("CIAdditionCompositing", image: joined, values: [kCIInputBackgroundImageKey: front])
-        return output("CIAdditionCompositing", image: image, values: [kCIInputBackgroundImageKey: layers]).cropped(to: image.extent)
-    }
-
-    private static func halationLayer(_ image: CIImage, channel: Int, lower: Float, upper: Float,
-                                     sigma: Float, color: (CGFloat, CGFloat, CGFloat), intensity: Float) -> CIImage {
-        let value = channel == 0 ? "dot(s.rgb, vec3(0.2126,0.7152,0.0722))" : "s.r"
-        let source = "kernel vec4 mask(__sample s) { float v = \(value); float m = smoothstep(\(lower), \(upper), v); return vec4(m,m,m,m); }"
-        // Legacy CIColorKernel(source:) remains available on the app's deployment target and permits these documented per-pixel formulas.
-        guard let kernel = CIColorKernel(source: source),
-              let mask = kernel.apply(extent: image.extent, arguments: [image]) else { return image }
-        let blur = gaussianBlur(mask, radius: sigma)
-        let tinted = output("CIColorMatrix", image: blur, values: [
-            "inputRVector": CIVector(x: color.0 * CGFloat(intensity), y: 0, z: 0, w: 0),
-            "inputGVector": CIVector(x: color.1 * CGFloat(intensity), y: 0, z: 0, w: 0),
-            "inputBVector": CIVector(x: color.2 * CGFloat(intensity), y: 0, z: 0, w: 0)
-        ])
-        return tinted.cropped(to: image.extent)
+        // Journal CI halation values were not recovered; both routes use the
+        // documented Metal defaults (section 7) via the shared implementation.
+        FilmEffects.halation(image, amount: 1)
     }
 
     private static func faceBalanceAndSkinToneUnavailable(_ image: CIImage) -> CIImage {
@@ -151,10 +128,7 @@ enum LapseRenderer {
         ])
         // Red-band shift is omitted because the recovered hue/saturation/brightness values lack a documented band width.
         let luminosity = output("CILuminosityBlendMode", image: adjusted, values: [kCIInputBackgroundImageKey: image])
-        let layer = output("CIColorMatrix", image: luminosity, values: [
-            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0.4)
-        ])
-        return output("CISourceOverCompositing", image: layer, values: [kCIInputBackgroundImageKey: image]).cropped(to: image.extent)
+        return mix(image, luminosity, opacity: 0.4)
     }
 
     static func vignette(_ image: CIImage, intensity: Float, radius: Float, power: Float? = nil) -> CIImage {
@@ -175,38 +149,50 @@ enum LapseRenderer {
     }
 
     private static func metalVignette(_ image: CIImage, intensity: Float, radius: Float, power: Float) -> CIImage {
-        // Metal q = clamp(radius * (uv - 0.5), -0.5, 0.5); this applies a radial power falloff to q.
+        // Section 8 gives q = clamp(radius * (uv - .5), -.5, .5) with pixel-centre uv.
+        // The falloff is reconstructed as the common Metal/shader-toy form
+        // v = (16 u.x u.y (1-u.x)(1-u.y))^power with u = q + .5, mixed by intensity.
+        // With power .09 and radius .95 this leaves the centre unchanged and darkens
+        // corners by about 30 %. Reconstruction: the shader body was not recovered.
         let extent = image.extent
-        let source = "kernel vec4 vignette(__sample s) { vec2 uv = (destCoord() - vec2(\(extent.minX),\(extent.minY))) / vec2(\(extent.width),\(extent.height)); vec2 q = clamp(\(radius) * (uv - vec2(0.5)), vec2(-0.5), vec2(0.5)); float v = \(intensity) * pow(clamp(length(q) * 2.0, 0.0, 1.0), \(power)); return vec4(s.rgb * (1.0 - v), s.a); }"
-        // Legacy CIColorKernel(source:) is used because the formulas need no separate Metal library asset.
+        let source = """
+        kernel vec4 lapseVignette(__sample s, vec4 rect, float radius, float power, float intensity) {
+            vec2 uv = (destCoord() - rect.xy) / rect.zw;
+            vec2 u = clamp(radius * (uv - vec2(0.5)), vec2(-0.5), vec2(0.5)) + vec2(0.5);
+            float v = pow(max(16.0 * u.x * u.y * (1.0 - u.x) * (1.0 - u.y), 0.0), power);
+            float f = mix(1.0, v, intensity);
+            return vec4(s.rgb * f, s.a);
+        }
+        """
         guard let kernel = CIColorKernel(source: source) else { return image }
-        return kernel.apply(extent: image.extent, arguments: [image]) ?? image
+        return kernel.apply(extent: extent, arguments: [image, CIVector(cgRect: extent), radius, power, intensity]) ?? image
     }
 
     private static func chromaticAberration(_ image: CIImage, offsets: (CGFloat, CGFloat, CGFloat) = (0, 6, 12.75), scale: CGFloat = 1.45) -> CIImage {
-        // Radial channel scaling matches edge displacement; the documented 80-sample blur is not reproduced.
+        // Transverse CA: each channel is sampled from a radially scaled position so its
+        // edge displacement is offset * scale pixels and the centre does not move.
+        // The previous version added three full-alpha planes (alpha 3), which
+        // overbrightened later blends. The documented 80-sample blur is not reproduced.
         let extent = image.extent
-        let diagonal = hypot(extent.width, extent.height)
-        guard diagonal > 0 else { return image }
-        let centerX = extent.midX
-        let centerY = extent.midY
-        func plane(_ channel: String, offset: CGFloat) -> CIImage {
-            let factor = 1 + offset * scale / (0.5 * diagonal)
-            var layer = output("CIColorMatrix", image: image, values: [
-                "inputRVector": channel == "R" ? CIVector(x: 1, y: 0, z: 0, w: 0) : CIVector(x: 0, y: 0, z: 0, w: 0),
-                "inputGVector": channel == "G" ? CIVector(x: 0, y: 1, z: 0, w: 0) : CIVector(x: 0, y: 0, z: 0, w: 0),
-                "inputBVector": channel == "B" ? CIVector(x: 0, y: 0, z: 1, w: 0) : CIVector(x: 0, y: 0, z: 0, w: 0)
-            ])
-            layer = layer.transformed(by: CGAffineTransform(translationX: -centerX, y: -centerY))
-                .transformed(by: CGAffineTransform(scaleX: factor, y: factor))
-                .transformed(by: CGAffineTransform(translationX: centerX, y: centerY))
-            return layer
+        let half = 0.5 * hypot(extent.width, extent.height)
+        guard half > 0 else { return image }
+        let k = (Float(offsets.0 * scale / half), Float(offsets.1 * scale / half), Float(offsets.2 * scale / half))
+        let source = """
+        kernel vec4 transverseCA(sampler src, vec2 center, vec3 k) {
+            vec2 p = destCoord() - center;
+            vec4 r = sample(src, samplerTransform(src, center + p / (1.0 + k.x)));
+            vec4 g = sample(src, samplerTransform(src, center + p / (1.0 + k.y)));
+            vec4 b = sample(src, samplerTransform(src, center + p / (1.0 + k.z)));
+            vec4 o = sample(src, samplerCoord(src));
+            return vec4(r.r, g.g, b.b, o.a);
         }
-        let red = plane("R", offset: offsets.0)
-        let green = plane("G", offset: offsets.1)
-        let blue = plane("B", offset: offsets.2)
-        let rg = output("CIAdditionCompositing", image: red, values: [kCIInputBackgroundImageKey: green])
-        return output("CIAdditionCompositing", image: rg, values: [kCIInputBackgroundImageKey: blue]).cropped(to: extent)
+        """
+        guard let kernel = CIKernel(source: source) else { return image }
+        let clamped = image.clampedToExtent()
+        let out = kernel.apply(extent: extent, roiCallback: { _, rect in rect.insetBy(dx: -40, dy: -40) },
+                               arguments: [clamped, CIVector(x: extent.midX, y: extent.midY),
+                                           CIVector(x: CGFloat(k.0), y: CGFloat(k.1), z: CGFloat(k.2))])
+        return out?.cropped(to: extent) ?? image
     }
 
     private static func globalBlur(_ image: CIImage, regularRadius: Float = 0.5,
@@ -214,20 +200,28 @@ enum LapseRenderer {
         let regular = gaussianBlur(image, radius: regularRadius)
         let darken = gaussianBlur(image, radius: darkenRadius)
         let darkened = output("CIDarkenBlendMode", image: regular, values: [kCIInputBackgroundImageKey: darken])
-        let translucent = output("CIColorMatrix", image: darkened, values: [
-            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(opacity))
-        ])
-        return output("CISourceOverCompositing", image: translucent, values: [kCIInputBackgroundImageKey: image]).cropped(to: image.extent)
+        return mix(image, darkened, opacity: opacity)
     }
 
     private static func gaussianBlur(_ image: CIImage, radius: Float) -> CIImage {
-        output("CIGaussianBlur", image: image, values: [kCIInputRadiusKey: radius]).cropped(to: image.extent)
+        // Clamp first so edges do not blur in transparent black (which lowers alpha at the border).
+        output("CIGaussianBlur", image: image.clampedToExtent(), values: [kCIInputRadiusKey: radius]).cropped(to: image.extent)
+    }
+
+    /// layer at `opacity` over base. Core Image works in premultiplied alpha:
+    /// scaling only the alpha of an opaque layer and compositing source-over
+    /// adds the full-strength colour back on top (a 1.7x brightening at 0.3).
+    /// A dissolve is the correct linear mix of two opaque images.
+    private static func mix(_ base: CIImage, _ layer: CIImage, opacity: Float) -> CIImage {
+        output("CIDissolveTransition", image: base, values: [
+            kCIInputTargetImageKey: layer, kCIInputTimeKey: opacity
+        ]).cropped(to: base.extent)
     }
 
     private static func colorOverlay(_ image: CIImage, red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) -> CIImage {
-        let color = CIColor(red: red, green: green, blue: blue, alpha: alpha)
-        let overlay = CIImage(color: color).cropped(to: image.extent)
-        return output("CISourceOverCompositing", image: overlay, values: [kCIInputBackgroundImageKey: image]).cropped(to: image.extent)
+        // Section 7: overlay colour at the given intensity, isColorBlend=false (a plain mix).
+        let overlay = CIImage(color: CIColor(red: red, green: green, blue: blue)).cropped(to: image.extent)
+        return mix(image, overlay, opacity: Float(alpha))
     }
 
     private static func grain(_ image: CIImage, intensity: Float, seed: Float) -> CIImage {
