@@ -227,7 +227,7 @@ struct PresetBoxArtView: View {
         }
     }
 
-    private func halideColors(index: Int) -> (Color, Float) {
+    private func halideColors(index: Int) -> ((Color, Float), (Color, Float)) {
         // Curated Italian modernist color pairs per preset
         let pairs: [(String, String)] = [
             ("F7D417", "E10600"),  // Process Zero: yellow + red
@@ -247,8 +247,9 @@ struct PresetBoxArtView: View {
         let primary = Color(hex: pair.0)
         let secondary = Color(hex: pair.1)
         let primaryLuma = Float(primary.components.r) * 0.2126 + Float(primary.components.g) * 0.7152 + Float(primary.components.b) * 0.0722
+        let secondaryLuma = Float(secondary.components.r) * 0.2126 + Float(secondary.components.g) * 0.7152 + Float(secondary.components.b) * 0.0722
 
-        return (primary, primaryLuma)
+        return ((primary, primaryLuma), (secondary, secondaryLuma))
     }
 
     // MARK: - Lapse: Japanese graphic, one big form, big numerals
