@@ -83,6 +83,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
                 croppedImage,
                 look: factory == "journal" ? .journal : .photoDefault,
                 sceneEV: shot.captureMetadata?.sceneEV ?? 8.0,
+                flash: shot.captureMetadata?.flashState == .on,
                 loadLUT: loadLUT
             )
         } else {
