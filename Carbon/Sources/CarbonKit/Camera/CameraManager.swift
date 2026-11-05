@@ -112,8 +112,11 @@ final class CameraManager: NSObject, ObservableObject {
         }
         session.addOutput(photoOutput)
         
-        // Lapse §1: Max quality prioritization
+        // Lapse §1: output allows quality; per-shot priority adapts to scene EV.
         photoOutput.maxPhotoQualityPrioritization = .quality
+        if let dimensions = Self.photoDimensions4x3(photoOutput.supportedPhotoDimensions).last {
+            photoOutput.maxPhotoDimensions = dimensions
+        }
 
         // Format setup (D-002: RAW+HEVC when available)
         if photoOutput.availableRawPhotoPixelFormatTypes.count > 0 {
@@ -170,6 +173,15 @@ final class CameraManager: NSObject, ObservableObject {
                 device.exposureMode = .continuousAutoExposure
             }
             
+            // Lapse §1 requests 30 fps where the active format supports it.
+            let supports30FPS = device.activeFormat.videoSupportedFrameRateRanges.contains {
+                $0.minFrameRate <= 30 && $0.maxFrameRate >= 30
+            }
+            if supports30FPS {
+                device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: 30)
+                device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: 30)
+            }
+
             // Low-light boost & smooth autofocus (Lapse SET §1)
             if device.isLowLightBoostSupported && preset.enablesLowLightBoost {
                 device.automaticallyEnablesLowLightBoostWhenAvailable = true
@@ -214,7 +226,11 @@ final class CameraManager: NSObject, ObservableObject {
         default: factor = 1.45
         }
         
-        let clamped = min(max(factor, device.minAvailableVideoZoomFactor), device.maxAvailableVideoZoomFactor)
+        let clamped = Self.clampedZoomFactor(
+            factor,
+            minimum: device.minAvailableVideoZoomFactor,
+            maximum: device.maxAvailableVideoZoomFactor
+        )
         device.ramp(toVideoZoomFactor: clamped, withRate: 10.0) // ~200ms smooth transition
     }
     
@@ -310,7 +326,8 @@ final class CameraManager: NSObject, ObservableObject {
                 captureID: captureID,
                 flashMode: self.activeFlashMode,
                 preset: self.activePreset,
-                aspectRatio: aspectRatio
+                aspectRatio: aspectRatio,
+                device: self.currentDevice
             ) { [weak self] result in
                 guard let self = self else { return }
                 Task { @MainActor in
@@ -318,6 +335,7 @@ final class CameraManager: NSObject, ObservableObject {
                     switch result {
                     case .success(let shot):
                         self.lastCapturedShot = shot
+                        self.currentSceneEV = shot.captureMetadata?.sceneEV ?? 8.0
                         RollStore.shared.addShot(shot.id)
                         self.logger.info("Captured shot \(shot.captureID) committed to journal")
                     case .failure(let error):
@@ -332,12 +350,17 @@ final class CameraManager: NSObject, ObservableObject {
     }
     
     private func buildPhotoSettings() -> AVCapturePhotoSettings {
-        Self.makePhotoSettings(
-            rawPixelFormatType: photoOutput.availableRawPhotoPixelFormatTypes.first,
+        var settings = Self.makePhotoSettings(
+            rawPixelFormatType: Self.isLapsePreset(activePreset) ? nil : photoOutput.availableRawPhotoPixelFormatTypes.first,
             maximumQuality: photoOutput.maxPhotoQualityPrioritization,
             flashMode: activeFlashMode,
-            supportedFlashModes: photoOutput.supportedFlashModes
+            supportedFlashModes: photoOutput.supportedFlashModes,
+            sceneEV: currentSceneEV
         )
+        if let dimensions = Self.photoDimensions4x3(photoOutput.supportedPhotoDimensions).last {
+            settings.maxPhotoDimensions = dimensions
+        }
+        return settings
     }
 
     // Keep settings construction independent of camera hardware so the RAW and
@@ -346,7 +369,8 @@ final class CameraManager: NSObject, ObservableObject {
         rawPixelFormatType: OSType?,
         maximumQuality: AVCapturePhotoOutput.QualityPrioritization,
         flashMode: AVCaptureDevice.FlashMode,
-        supportedFlashModes: [AVCaptureDevice.FlashMode]
+        supportedFlashModes: [AVCaptureDevice.FlashMode],
+        sceneEV: Float = 0
     ) -> AVCapturePhotoSettings {
         let settings: AVCapturePhotoSettings
 
@@ -371,18 +395,66 @@ final class CameraManager: NSObject, ObservableObject {
             ])
         }
         
+        settings.isDepthDataDeliveryEnabled = false
+        settings.isPortraitEffectsMatteDeliveryEnabled = false
+        settings.enabledSemanticSegmentationMatteTypes = []
+
         // Flash
         if supportedFlashModes.contains(flashMode) {
             settings.flashMode = flashMode
         }
         
-        // AVFoundation raises an Objective-C exception if Bayer RAW requests
-        // balanced/quality processing, even when paired with a processed photo.
-        // ProRAW and processed-only captures may use the output's quality limit.
-        settings.photoQualityPrioritization = AVCapturePhotoOutput.isBayerRAWPixelFormat(
-            settings.rawPhotoPixelFormatType
-        ) ? .speed : maximumQuality
+        // Bayer RAW requires .speed; processed-only captures use Lapse's EV rule.
+        settings.photoQualityPrioritization = Self.qualityPrioritization(
+            isBayerRAW: AVCapturePhotoOutput.isBayerRAWPixelFormat(settings.rawPhotoPixelFormatType),
+            sceneEV: sceneEV,
+            maximumQuality: maximumQuality
+        )
         return settings
+    }
+
+    nonisolated static func isLapsePreset(_ preset: PresetDefinition) -> Bool {
+        if case .lapseReference = preset.source { return true }
+        return false
+    }
+
+    nonisolated static func sceneEV(aperture: Float, iso: Float, exposureSeconds: Double) -> Float {
+        guard aperture.isFinite, aperture > 0, iso.isFinite, iso > 0,
+              exposureSeconds.isFinite, exposureSeconds > 0 else { return 8.0 }
+        return log2(aperture * aperture / ((iso / 100.0) * Float(exposureSeconds)))
+    }
+
+    nonisolated static func qualityPrioritization(
+        isBayerRAW: Bool,
+        sceneEV: Float,
+        maximumQuality: AVCapturePhotoOutput.QualityPrioritization
+    ) -> AVCapturePhotoOutput.QualityPrioritization {
+        if isBayerRAW { return .speed }
+        return sceneEV > 6.0 ? .balanced : maximumQuality
+    }
+
+    nonisolated static func photoDimensions4x3(_ dimensions: [CMVideoDimensions]) -> [CMVideoDimensions] {
+        dimensions.filter { dimension in
+            guard dimension.width > 0, dimension.height > 0 else { return false }
+            return abs(Float(dimension.width) / Float(dimension.height) - (4.0 / 3.0)) < 0.01
+        }
+    }
+
+    nonisolated static func clampedZoomFactor(_ requested: CGFloat, minimum: CGFloat, maximum: CGFloat) -> CGFloat {
+        max(minimum, min(requested, min(maximum, 20.0)))
+    }
+
+    nonisolated static func whiteBalanceMetadata(
+        redGain: Float?, greenGain: Float?, blueGain: Float?, maximumGain: Float,
+        convertedTemperature: Float?, convertedTint: Float?
+    ) -> (temperature: Float, tint: Float) {
+        guard let redGain, let greenGain, let blueGain,
+              redGain.isFinite, greenGain.isFinite, blueGain.isFinite,
+              redGain >= 1, greenGain >= 1, blueGain >= 1,
+              redGain < maximumGain, greenGain < maximumGain, blueGain < maximumGain,
+              let temperature = convertedTemperature, temperature.isFinite,
+              let tint = convertedTint, tint.isFinite else { return (4000, 0) }
+        return (temperature, tint)
     }
     
     /// C02: Safety capture — request 3 frames when enabled (D-025: off by default)
@@ -402,7 +474,8 @@ final class CameraManager: NSObject, ObservableObject {
                     captureID: captureID,
                     flashMode: self.activeFlashMode,
                     preset: self.activePreset,
-                    aspectRatio: aspectRatio
+                    aspectRatio: aspectRatio,
+                    device: self.currentDevice
                 ) { [weak self] result in
                     guard let self = self else { return }
                     Task { @MainActor in
@@ -429,6 +502,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
     private let requestedFlashMode: AVCaptureDevice.FlashMode
     private let capturePreset: PresetDefinition
     private let aspectRatio: PhotoAspectRatio
+    private let device: AVCaptureDevice?
     private let completion: (Result<Shot, Error>) -> Void
     
     private var rawData: Data?
@@ -440,15 +514,35 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         flashMode: AVCaptureDevice.FlashMode,
         preset: PresetDefinition,
         aspectRatio: PhotoAspectRatio,
+        device: AVCaptureDevice?,
         completion: @escaping (Result<Shot, Error>) -> Void
     ) {
         self.captureID = captureID
         self.requestedFlashMode = flashMode
         self.capturePreset = preset
         self.aspectRatio = aspectRatio
+        self.device = device
         self.completion = completion
     }
     
+    private func captureWhiteBalanceMetadata() -> (temperature: Float, tint: Float) {
+        guard let device else { return (4000, 0) }
+        let gains = device.deviceWhiteBalanceGains
+        guard gains.redGain >= 1, gains.greenGain >= 1, gains.blueGain >= 1,
+              gains.redGain < device.maxWhiteBalanceGain,
+              gains.greenGain < device.maxWhiteBalanceGain,
+              gains.blueGain < device.maxWhiteBalanceGain else { return (4000, 0) }
+        let converted = device.temperatureAndTintValues(for: gains)
+        return CameraManager.whiteBalanceMetadata(
+            redGain: gains.redGain,
+            greenGain: gains.greenGain,
+            blueGain: gains.blueGain,
+            maximumGain: device.maxWhiteBalanceGain,
+            convertedTemperature: converted.temperature,
+            convertedTint: converted.tint
+        )
+    }
+
     func photoOutput(
         _ output: AVCapturePhotoOutput,
         didFinishProcessingPhoto photo: AVCapturePhoto,
@@ -473,17 +567,15 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         let expDuration = metadata[kCGImagePropertyExifExposureTime as String] as? Double ?? (1.0 / 60.0)
         let cmDuration = CMTime(seconds: expDuration, preferredTimescale: 1000)
         
-        // Extract white balance from EXIF (may be missing)
-        let temperature = metadata[kCGImagePropertyExifWhiteBalance as String] as? Float ?? 5500.0
         let orientation = metadata[kCGImagePropertyOrientation as String] as? Int ?? 1
-        
-        // Compute scene EV from ISO and exposure time
-        let fNumber: Float = 1.8 // iPhone wide lens
-        let sceneEV = log2(pow(fNumber, 2) / (Float(iso) / 100.0 * Float(expDuration)))
+        let wb = captureWhiteBalanceMetadata()
+        let exif = metadata[kCGImagePropertyExifDictionary as String] as? [String: Any]
+        let aperture = exif?[kCGImagePropertyExifFNumber as String] as? Float ?? 1.8
+        let sceneEV = CameraManager.sceneEV(aperture: aperture, iso: Float(iso), exposureSeconds: expDuration)
         
         captureMetadata = Shot.CaptureMetadata(
-            temperature: temperature,
-            tint: 0,
+            temperature: wb.temperature,
+            tint: wb.tint,
             iso: Float(iso),
             exposureDuration: cmDuration,
             sceneEV: sceneEV,
@@ -513,11 +605,12 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                     width: CGFloat(swapsAxes ? dimensions.height : dimensions.width),
                     height: CGFloat(swapsAxes ? dimensions.width : dimensions.height)
                 )
+                let isLapse = CameraManager.isLapsePreset(defaultPreset)
                 let recipe = RecipeVersion(
                     recipeID: defaultPreset.presetID,
                     presetDefinitionID: defaultPreset.id,
                     engineVersion: "1.0",
-                    source: rawData != nil ? .rawBayer : .processedHEVC,
+                    source: isLapse ? .processedHEVC : (rawData != nil ? .rawBayer : .processedHEVC),
                     parameters: RecipeVersion.Parameters(
                         filmPreset: defaultPreset.displayName,
                         filmStrength: 0.85,
@@ -578,7 +671,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
                     sources: sources,
                     currentRecipe: recipe,
                     captureMetadata: captureMetadata ?? Shot.CaptureMetadata(
-                        temperature: 5500,
+                        temperature: 4000,
                         tint: 0,
                         iso: 100,
                         exposureDuration: CMTime(value: 1, timescale: 60),
