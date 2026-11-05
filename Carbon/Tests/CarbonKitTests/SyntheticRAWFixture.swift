@@ -5,10 +5,11 @@ import Foundation
 enum SyntheticRAWFixture {
     static let levels: [Double] = [0.04, 0.09, 0.18, 0.36, 0.72]
     static let width = 320
-    static let height = 128
+    // ImageIO does not recognize the 320x128 version as DNG. Keep both
+    // dimensions large enough for Apple's RAW decoder, including in CI.
+    static let height = 256
 
-    static func data(orientation: UInt16 = 1, neutral: [Double] = [1, 1, 1],
-                     width: Int = SyntheticRAWFixture.width, height: Int = SyntheticRAWFixture.height) -> Data {
+    static func data(orientation: UInt16 = 1, neutral: [Double] = [1, 1, 1]) -> Data {
         typealias Entry = (tag: UInt16, type: UInt16, count: UInt32, bytes: Data)
         func short(_ tag: UInt16, _ value: UInt16) -> Entry {
             (tag, 3, 1, words([value]))

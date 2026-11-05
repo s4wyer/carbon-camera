@@ -33,7 +33,8 @@ final class RAWDevelopmentTests: XCTestCase {
 
     func testPureRAWControlsPreserveCameraCalibration() throws {
         let raw = try XCTUnwrap(CIRAWFilter(imageURL: fixture(neutral: [1, 0.85, 0.6])))
-        print("RAW diagnostic before configuration: size=\(raw.nativeSize) decoders=\(raw.supportedDecoderVersions) output=\(String(describing: raw.outputImage))")
+        XCTAssertEqual(raw.nativeSize, CGSize(width: SyntheticRAWFixture.width,
+                                             height: SyntheticRAWFixture.height))
         let temperature = raw.neutralTemperature
         let tint = raw.neutralTint
         let orientation = raw.orientation
@@ -70,15 +71,9 @@ final class RAWDevelopmentTests: XCTestCase {
         }
     }
 
-    func testFixtureDecoderDiagnostics() throws {
-        for (width, height) in [(320, 128), (320, 256), (640, 512), (1280, 1024)] {
-            let url = try fixture()
-            try SyntheticRAWFixture.data(width: width, height: height).write(to: url)
-            let source = CGImageSourceCreateWithURL(url as CFURL, nil)!
-            print("DNG diagnostic \(width)x\(height): type=\(String(describing: CGImageSourceGetType(source))) properties=\(String(describing: CGImageSourceCopyPropertiesAtIndex(source, 0, nil)))")
-            let raw = CIRAWFilter(imageURL: url)!
-            print("DNG diagnostic native=\(raw.nativeSize) versions=\(raw.supportedDecoderVersions) image=\(String(describing: raw.outputImage))")
-        }
+    func testSyntheticFixtureIsRecognizedAsDNG() throws {
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(fixture() as CFURL, nil))
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, "com.adobe.raw-image")
     }
 
     func testCameraWhiteBalanceMakesNeutralRampNeutralAndLinear() throws {
@@ -120,7 +115,7 @@ final class RAWDevelopmentTests: XCTestCase {
         let url = try fixture(neutral: [1, 0.85, 0.6])
         let full = try XCTUnwrap(PhotoGeometry.sourceImage(at: url))
         let preview = try XCTUnwrap(PhotoGeometry.sourceImage(at: url, maxPixelSize: 160))
-        XCTAssertEqual(preview.extent.size, CGSize(width: 160, height: 64))
+        XCTAssertEqual(preview.extent.size, CGSize(width: 160, height: 128))
         let fullGray = pixel(full, x: 160, y: 64, colorSpace: CIContextProvider.workingColorSpace)
         let previewGray = pixel(preview, x: 80, y: 32, colorSpace: CIContextProvider.workingColorSpace)
         for channel in 0..<3 {
