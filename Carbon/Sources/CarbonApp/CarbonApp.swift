@@ -26,23 +26,37 @@ struct CarbonApp: App {
                             }
                     }
                 } else {
-                    WelcomeCameraTransition(coordinator: coordinator) {
-                        switch coordinator.currentScreen {
-                        case .welcome, .camera:
-                            // Prepare the preview under the welcome cover, but
-                            // activate capture only when the route is camera.
-                            CameraView(coordinator: coordinator)
-                        case .rolls:
-                            RollsView(coordinator: coordinator)
-                        case .library:
-                            LibraryView(coordinator: coordinator)
-                        case .lab:
-                            LabView(coordinator: coordinator)
-                        }
-                    }
+                    appContent
                 }
             }
             .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder private var appContent: some View {
+        #if DEBUG
+        if ScreenshotHarnessView.isEnabled {
+            ScreenshotHarnessView()
+        } else {
+            navigationContent
+        }
+        #else
+        navigationContent
+        #endif
+    }
+
+    private var navigationContent: some View {
+        WelcomeCameraTransition(coordinator: coordinator) {
+            switch coordinator.currentScreen {
+            case .welcome, .camera:
+                CameraView(coordinator: coordinator)
+            case .rolls:
+                RollsView(coordinator: coordinator)
+            case .library:
+                LibraryView(coordinator: coordinator)
+            case .lab:
+                LabView(coordinator: coordinator)
+            }
         }
     }
 }

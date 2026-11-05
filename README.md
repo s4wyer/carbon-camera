@@ -120,12 +120,20 @@ explicitly by the UI tests and exported to the gallery. Each test job's summary
 reports destination selection, compilation, the remaining simulator wait, and
 test execution times. Phase logs are also uploaded for startup diagnostics.
 
-The screenshot job captures and uploads the nine gallery PNGs first, then runs
-the remaining welcome interaction, accessibility, and transition tests on the
-same booted simulator using the same compiled bundles. The screenshot artifact
-can be downloaded while those remaining tests run. Both result bundles are kept
-in the UI test results artifact; a published gallery does not mean the full UI
-suite has passed yet.
+The gallery uses a Debug-only capture harness enabled by `--capture-harness`
+alongside the sample-photo flags. It displays the production Welcome, Camera,
+Stock, Rolls, and Settings views in a live window. The host writes scene requests
+into the app's Simulator data container; the app acknowledges a matching token
+only after fixture thumbnails, native sheets, layout, and scroll positions settle.
+`simctl io screenshot` captures the real display, including UIKit content. The
+three top/selected Stock images show the same state; middle and bottom captures
+use normalized scroll positions of 0.5 and 1. Capture metadata ships with the PNGs.
+
+PNGs upload before XCTest starts. All six navigation, permission, accessibility,
+and transition UI tests then run on that same booted device. The harness images
+verify rendered fixture states; they are not evidence that navigation passed.
+The full UI result bundle retains its own screenshot attachments. The harness is
+excluded from Release builds and never runs without the explicit fixture flags.
 
 ### Building locally
 

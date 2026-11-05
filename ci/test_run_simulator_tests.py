@@ -96,7 +96,7 @@ esac
         path.write_text(source, encoding='utf-8', newline='\n')
         path.chmod(0o755)
 
-    def run_runner(self, target='CarbonKitTests', result_name='TestResults', mode=None, **overrides):
+    def run_runner(self, target='CarbonKitTests', result_name='TestResults', **overrides):
         env = dict(os.environ)
         env.update(
             PATH=str(self.bin) + os.pathsep + env['PATH'],
@@ -104,8 +104,6 @@ esac
         )
         env.update(overrides)
         command = ['bash', 'ci/run_simulator_tests.sh', target, result_name]
-        if mode:
-            command.append(mode)
         result = subprocess.run(
             command,
             cwd=self.root, env=env, capture_output=True, text=True, timeout=15,
@@ -183,38 +181,13 @@ esac
         self.assertIn('no passing tests', result.stderr)
         self.assertIn('tests', events)
 
-    def test_gallery_and_remaining_tests_share_build_and_boot(self):
-        result, events = self.run_runner(
-            target='CarbonUITests/CarbonUITests/testCaptureAllScreens',
-            result_name='UITestResults', mode='--keep-simulator',
-        )
+    def test_full_ui_suite_reuses_the_gallery_device(self):
+        result, events = self.run_runner(target='CarbonUITests', CARBON_SIMULATOR_ID=DEVICE)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertNotIn('shutdown', events)
-        result, events = self.run_runner(
-            target='CarbonUITests/WelcomeUITests', result_name='WelcomeTestResults',
-            mode='--reuse-simulator',
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(events.count('build-start'), 1)
-        self.assertEqual(events.count('boot-start'), 1)
-        self.assertEqual(events.count('tests'), 2)
+        self.assertIn(f'Reusing gallery simulator: {DEVICE}', result.stdout)
+        self.assertFalse((self.root / 'Carbon/build/TestResults-destinations.log').exists())
+        self.assertIn('tests', events)
         self.assertEqual(events[-1], 'shutdown')
-        commands = (self.root / 'commands').read_text().splitlines()
-        self.assertIn('-only-testing:CarbonUITests ', commands[0])
-        self.assertIn('-only-testing:CarbonUITests/CarbonUITests/testCaptureAllScreens', commands[1])
-        self.assertIn('-only-testing:CarbonUITests/WelcomeUITests', commands[2])
-
-    def test_failed_capture_shuts_down_instead_of_preserving_session(self):
-        result, events = self.run_runner(mode='--keep-simulator', MOCK_TEST_STATUS='44')
-        self.assertEqual(result.returncode, 44)
-        self.assertEqual(events[-1], 'shutdown')
-        self.assertFalse((self.root / 'Carbon/build/UISimulatorSession.txt').exists())
-
-    def test_cannot_reuse_missing_session(self):
-        result, events = self.run_runner(mode='--reuse-simulator')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('No prepared simulator session', result.stdout)
-        self.assertNotIn('tests', events)
 
 
 if __name__ == '__main__':
