@@ -116,6 +116,17 @@ struct HarnessMain {
         // every preset shares (highlight shoulder) from each preset's own look.
         var presets: [(String, String, PresetParameters, PresetDefinition?)] = [("_baseline", "Baseline", PresetParameters(), nil)]
         for p in PresetLibrary.all { presets.append((p.presetID, p.displayName, p.baseParameters, p)) }
+        // Stage-isolation diagnostics: the same preset with one shared stage
+        // switched off, so each effect's contribution is measured, not modelled.
+        // IDs start with "_diag" and are never rated or shipped.
+        for p in PresetLibrary.all where ["carbon-natural", "halide-process-zero", "nofusion-nc", "halide-elysia"].contains(p.presetID) {
+            var noGrain = p.baseParameters; noGrain.grainAmount = 0
+            var noHalation = p.baseParameters; noHalation.halationIntensity = 0
+            var lutOnly = noHalation; lutOnly.grainAmount = 0; lutOnly.bloomAmount = 0; lutOnly.vignetteIntensity = 0
+            presets.append(("_diag-\(p.presetID)-nograin", "diag", noGrain, nil))
+            presets.append(("_diag-\(p.presetID)-nohalation", "diag", noHalation, nil))
+            presets.append(("_diag-\(p.presetID)-lutonly", "diag", lutOnly, nil))
+        }
         FileHandle.standardOutput.write("rendering \(presets.count) presets x \(inputs.count) scenes on Metal\n".data(using: .utf8)!)
 
         for (presetID, displayName, parameters, definition) in presets {

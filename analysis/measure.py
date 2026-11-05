@@ -301,7 +301,7 @@ def main() -> int:
               f"  slope {m['tone']['midtone_slope']}")
 
     # pairwise difference of rendered outputs (OKLab deltaE, mean over all scenes)
-    ids = [p for p in presets if p != "_baseline"]
+    ids = [p for p in presets if not p.startswith("_")]
     labs = {p: np.concatenate([rgb_to_oklab(load(RENDERS / p / f"{s}.png")[::4, ::4].reshape(-1, 3))
                                for s in scenes]) for p in ids}
     pair = {}
