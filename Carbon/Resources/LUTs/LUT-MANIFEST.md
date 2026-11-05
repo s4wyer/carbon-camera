@@ -50,6 +50,14 @@
 **Format:** dimension³ × 4 float32 (RGBA), little-endian, no header  
 **Usage:** `LUTLoader.loadNoFusionLutbin(data:dimension:)` reads raw floats
 
+## Lapse LUTs (1 file, 33³ cube)
+
+| Preset | LUT file | SHA-256 |
+|---|---|---|
+| Journal / Photo Default | `lapse/Lapse-V4-03.cube` | `6e9a03e7d1c9c32779feba4e74addc809797a8dfb2f6b02cd985972f6d7ca239` |
+
+**Format:** Original Lapse V4-03 33³ cube text, copied verbatim from Lapse 4.1.1.
+
 ## Provenance
 
 - **Halide 3.3.1 Dev IPA:** `halide-recovered-ccube/`
