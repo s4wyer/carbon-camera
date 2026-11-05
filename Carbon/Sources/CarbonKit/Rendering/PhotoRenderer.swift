@@ -314,18 +314,18 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
     }
     
     private func applyHalation(to image: CIImage, radius: Float, intensity: Float) -> CIImage {
-        guard let bloom = CIFilter(name: "CIBloom") else { return image }
-        bloom.setValue(image, forKey: kCIInputImageKey)
-        bloom.setValue(radius, forKey: kCIInputRadiusKey)
-        bloom.setValue(intensity, forKey: kCIInputIntensityKey)
-        guard let bloomImage = bloom.outputImage else { return image }
-        
-        guard let composite = CIFilter(name: "CIScreenBlendMode") else { return image }
-        composite.setValue(bloomImage, forKey: kCIInputImageKey)
-        composite.setValue(image, forKey: kCIInputBackgroundImageKey)
-        return composite.outputImage ?? image
+        // D-018 highlight-only halation. The previous CIBloom + screen blend lit
+        // flat midtones (Process Zero 0.52 -> 0.91 on a flat field). The blur
+        // sigmas come from D-018, so `halationRadius` no longer changes the render.
+        _ = radius
+        return FilmEffects.halation(image, amount: intensity)
     }
     
+    /// Halide looks whose resource files are named DisplayP3 (LUTResources halideMap).
+    static let halideDisplayP3LUTs: Set<String> = [
+        "halide-zephyr-sdr", "halide-zephyr-hdr", "halide-valencia-sdr", "halide-valencia-hdr"
+    ]
+
     private func applyBloom(to image: CIImage, radius: Float, intensity: Float) -> CIImage {
         guard let filter = CIFilter(name: "CIBloom") else { return image }
         filter.setValue(image, forKey: kCIInputImageKey)
@@ -394,24 +394,9 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
     }
     
     private func applyGrain(to image: CIImage, intensity: Float, size: Float) -> CIImage {
-        guard let grainFilter = CIFilter(name: "CIRandomGenerator"),
-              let grain = grainFilter.outputImage else { return image }
-        
-        let transform = CGAffineTransform(scaleX: CGFloat(size), y: CGFloat(size))
-        let scaledGrain = grain.transformed(by: transform).cropped(to: image.extent)
-        
-        guard let matrix = CIFilter(name: "CIColorMatrix") else { return image }
-        matrix.setValue(scaledGrain, forKey: kCIInputImageKey)
-        matrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputRVector")
-        matrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputGVector")
-        matrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputBVector")
-        matrix.setValue(CIVector(x: 1, y: 0, z: 0, w: CGFloat(intensity * 0.15)), forKey: "inputAVector")
-        guard let translucentGrain = matrix.outputImage else { return image }
-        
-        guard let blend = CIFilter(name: "CISourceOverCompositing") else { return image }
-        blend.setValue(translucentGrain, forKey: kCIInputImageKey)
-        blend.setValue(image, forKey: kCIInputBackgroundImageKey)
-        return blend.outputImage ?? image
+        // Zero-mean additive grain. The previous version source-over'd a black
+        // layer whose alpha was the noise value, darkening every pixel by ~50%.
+        FilmEffects.grain(image, amount: intensity, size: size)
     }
     
     private func applyLUT(
@@ -423,20 +408,27 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         try cancellation.throwIfCancelled()
         let lutData = try loadLUT(lutID)
         try cancellation.throwIfCancelled()
-        let rawData = lutData.rgba.withUnsafeBufferPointer { buffer in
-            Data(buffer: buffer)
-        }
-        
-        guard let filter = CIFilter(name: "CIColorCubeWithColorSpace") else {
-            throw RenderError.metalUnavailable
-        }
-        filter.setValue(lutData.dimension, forKey: "inputCubeDimension")
-        filter.setValue(rawData, forKey: "inputCubeData")
-        filter.setValue(colorSpace, forKey: "inputColorSpace")
-        filter.setValue(image, forKey: kCIInputImageKey)
-        
-        guard let lutOutput = filter.outputImage else {
-            throw RenderError.lutNotFound(lutID)
+        let lutOutput: CIImage
+        if lutID.hasPrefix("halide-") {
+            // Halide cubes take Apple Log / Rec.2020 input, not sRGB (FilmEffects).
+            lutOutput = FilmEffects.applyHalideCube(
+                image, lut: lutData, displayP3Output: Self.halideDisplayP3LUTs.contains(lutID)
+            )
+        } else {
+            let rawData = lutData.rgba.withUnsafeBufferPointer { buffer in
+                Data(buffer: buffer)
+            }
+            guard let filter = CIFilter(name: "CIColorCubeWithColorSpace") else {
+                throw RenderError.metalUnavailable
+            }
+            filter.setValue(lutData.dimension, forKey: "inputCubeDimension")
+            filter.setValue(rawData, forKey: "inputCubeData")
+            filter.setValue(colorSpace, forKey: "inputColorSpace")
+            filter.setValue(image, forKey: kCIInputImageKey)
+            guard let output = filter.outputImage else {
+                throw RenderError.lutNotFound(lutID)
+            }
+            lutOutput = output
         }
         
         // If intensity < 1.0, blend back with input

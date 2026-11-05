@@ -69,7 +69,7 @@ extension PresetLibrary {
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         presetID: "carbon-natural",
         displayName: "Natural",
-        description: "Restrained color, added grain, and a soft glow around highlights.",
+        description: "Restrained color and a soft glow around highlights.",
         source: .original(rationale: "D-006: Process Zero film base, renamed/tuned for amateurs, portrait-optimized"),
         baseParameters: PresetParameters(
             strength: 0.85,  // Reduced from 1.0 for subtlety
@@ -96,7 +96,7 @@ extension PresetLibrary {
                 HSLAdjustment(hue: 0, saturation: 1.0, luminance: 1.0),  // purple
                 HSLAdjustment(hue: 0, saturation: 1.0, luminance: 1.0),  // magenta
             ],
-            grainAmount: 0.4,
+            grainAmount: 0.0,  // D-025: Natural adds no grain
             grainSize: 1.0,
             halationRadius: 4.0,
             halationIntensity: 0.3,
@@ -236,7 +236,7 @@ extension PresetLibrary {
         displayName: "Elysia",
         description: "Halide Look: Elysia.",
         source: .halideReference(lookName: "elysia", section: "§2"),
-        baseParameters: neutralParams(lutID: "halide-elysia-sdr"),
+        baseParameters: neutralParams(lutID: "halide-elysia-carbon-sdr"),
         carbonDeltas: [],
         engineVersion: "1.0",
         displayOrder: 109,
