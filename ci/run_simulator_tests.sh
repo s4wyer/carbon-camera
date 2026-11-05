@@ -4,6 +4,11 @@ set -euo pipefail
 
 TEST_TARGET="${1:?Expected a test target}"
 RESULT_NAME="${2:?Expected a result bundle name}"
+SESSION_MODE="${3:-run}"
+case "$SESSION_MODE" in
+  run|--keep-simulator|--reuse-simulator) ;;
+  *) echo "::error::Unknown simulator session mode: $SESSION_MODE"; exit 1 ;;
+esac
 cd "$(dirname "$0")/../Carbon"
 mkdir -p build
 
@@ -12,6 +17,7 @@ SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/null}"
 BOOT_LOG="build/$RESULT_NAME-simulator.log"
 BOOT_PID=""
 DEVICE=""
+SESSION_FILE=./build/UISimulatorSession.txt
 HOST_ARCH=$(uname -m)
 case "$HOST_ARCH" in
   arm64|x86_64) ;;
@@ -36,17 +42,35 @@ run_timed() {
 }
 
 cleanup() {
+  local status=$?
   if [ -n "$BOOT_PID" ]; then
     kill "$BOOT_PID" 2>/dev/null || true
     wait "$BOOT_PID" 2>/dev/null || true
   fi
-  if [ -n "$DEVICE" ]; then
+  if [ -n "$DEVICE" ] && { [ "$SESSION_MODE" != --keep-simulator ] || [ "$status" -ne 0 ]; }; then
     xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
 
 printf '### %s timings\n\n| Phase | Duration |\n| --- | ---: |\n' "$TEST_TARGET" >> "$SUMMARY_FILE"
+if [ "$SESSION_MODE" = --reuse-simulator ]; then
+  if [ ! -f "$SESSION_FILE" ]; then
+    echo "::error::No prepared simulator session exists"
+    exit 1
+  fi
+  {
+    IFS= read -r DEVICE
+    IFS= read -r SESSION_ARCH
+    IFS= read -r TEST_RUN
+  } < "$SESSION_FILE"
+  if [ "$SESSION_ARCH" != "$HOST_ARCH" ] || [ ! -f "$TEST_RUN" ]; then
+    echo "::error::Prepared simulator session has incompatible architecture or missing test bundles"
+    exit 1
+  fi
+  echo "Reusing simulator $DEVICE and test manifest $TEST_RUN"
+  record_timing "Reuse prepared simulator and test bundles" 0
+else
 STARTED=$SECONDS
 # Query CoreSimulator directly: Xcode can initially report only generic
 # placeholders before the simulator service has enumerated its devices.
@@ -65,7 +89,8 @@ BUILD_ARGS=(
   -project Carbon.xcodeproj
   -scheme Carbon
   -destination 'generic/platform=iOS Simulator'
-  -only-testing:"$TEST_TARGET"
+  # Build the whole target so later test groups can reuse the same manifest.
+  -only-testing:"${TEST_TARGET%%/*}"
   -derivedDataPath ./build/DerivedData
   -parallel-testing-enabled NO
   -enableCodeCoverage YES
@@ -89,6 +114,7 @@ if [ "${#TEST_RUNS[@]}" -ne 1 ] || [ ! -f "${TEST_RUNS[0]}" ]; then
   exit 1
 fi
 echo "Test manifest: ${TEST_RUNS[0]}"
+TEST_RUN="${TEST_RUNS[0]}"
 
 STARTED=$SECONDS
 if wait "$BOOT_PID"; then
@@ -102,12 +128,13 @@ else
 fi
 cat "$BOOT_LOG"
 record_timing "Wait for simulator after compilation" "$((SECONDS - STARTED))"
+fi
 
 # The manifest contains the built bundle paths and configuration. Execute it
 # directly, without loading the project or re-evaluating the scheme's build.
 run_timed "Execute tests without rebuilding" \
   xcodebuild test-without-building \
-    -xctestrun "${TEST_RUNS[0]}" \
+    -xctestrun "$TEST_RUN" \
     -destination "platform=iOS Simulator,id=$DEVICE,arch=$HOST_ARCH" \
     -only-testing:"$TEST_TARGET" \
     -parallel-testing-enabled NO \
@@ -120,3 +147,7 @@ run_timed "Execute tests without rebuilding" \
 xcrun xcresulttool get test-results summary --path "./build/$RESULT_NAME.xcresult" \
   > "build/$RESULT_NAME-summary.json"
 python3 ../ci/check_test_results.py "build/$RESULT_NAME-summary.json"
+
+if [ "$SESSION_MODE" = --keep-simulator ]; then
+  printf '%s\n%s\n%s\n' "$DEVICE" "$HOST_ARCH" "$TEST_RUN" > "$SESSION_FILE"
+fi

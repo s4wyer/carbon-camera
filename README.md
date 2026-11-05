@@ -120,6 +120,13 @@ explicitly by the UI tests and exported to the gallery. Each test job's summary
 reports destination selection, compilation, the remaining simulator wait, and
 test execution times. Phase logs are also uploaded for startup diagnostics.
 
+The screenshot job captures and uploads the nine gallery PNGs first, then runs
+the remaining welcome interaction, accessibility, and transition tests on the
+same booted simulator using the same compiled bundles. The screenshot artifact
+can be downloaded while those remaining tests run. Both result bundles are kept
+in the UI test results artifact; a published gallery does not mean the full UI
+suite has passed yet.
+
 ### Building locally
 
 1. Transfer this repository to Mac with Xcode 16+.
