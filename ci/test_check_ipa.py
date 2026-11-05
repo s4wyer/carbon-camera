@@ -34,7 +34,7 @@ class IPAPackagingTests(unittest.TestCase):
         }
         self.files = {"Assets.car": b"assets", "AppIcon60x60@2x.png": png(120),
                       "AppIcon60x60@3x.png": png(180)}
-        for folder, extension, count in (("halide", "ccube", 24), ("nofusion", "lutbin", 20)):
+        for folder, extension, count in (("halide", "ccube", 25), ("nofusion", "lutbin", 20), ("lapse", "cube", 1)):
             self.files.update({f"LUTs/{folder}/{i}.{extension}": b"lut" for i in range(count)})
 
     def write(self, platform=2, executable=True, prefix=""):
@@ -97,7 +97,7 @@ class IPAPackagingTests(unittest.TestCase):
     def test_rejects_missing_luts(self):
         del self.files["LUTs/halide/0.ccube"]
         self.write()
-        with self.assertRaisesRegex(ValueError, "Expected 24 halide LUTs"):
+        with self.assertRaisesRegex(ValueError, "Expected 25 halide LUTs"):
             check_ipa(self.path)
 
 

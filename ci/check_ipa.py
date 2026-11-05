@@ -95,7 +95,7 @@ def check_ipa(path):
             sizes.update(png_size(archive.read(n)) for n in matches)
         require({(120, 120), (180, 180)} <= sizes, "Missing 2x/3x iPhone home screen icons")
         require(root + "Assets.car" in names, "Missing compiled asset catalog")
-        for folder, extension, count in (("halide", ".ccube", 24), ("nofusion", ".lutbin", 20)):
+        for folder, extension, count in (("halide", ".ccube", 25), ("nofusion", ".lutbin", 20), ("lapse", ".cube", 1)):
             actual = sum(n.startswith(root + f"LUTs/{folder}/") and n.endswith(extension)
                          for n in names)
             require(actual == count, f"Expected {count} {folder} LUTs, found {actual}")
