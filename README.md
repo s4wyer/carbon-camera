@@ -10,7 +10,7 @@ Carbon is an iPhone camera for amateurs who want memorable photographs of people
 
 **New work (Nov 3, 2024):**
 - **SET13b**: Reference presets menu ("Stolen Goods") with cheeky attribution — surfaces all Halide/Lapse/No Fusion presets transparently (decision D-024, PresetLibrary.swift scaffold)
-- **GitHub Actions CI**: `.github/workflows/build.yml` — uses Xcode 26.3 on `macos-15`, tests on the newest eligible installed iPhone simulator, builds an unsigned IPA on push to main/develop, and runs Python pipeline verification. The deployment target remains iOS 18.0; the selected simulator runtime is recorded in the test phase logs.
+- **GitHub Actions CI**: `.github/workflows/build.yml` — uses Xcode 26.3 on `macos-15`, tests on the newest available installed iPhone simulator, builds an unsigned IPA on push to main/develop, and runs Python pipeline verification. The deployment target remains iOS 18.0; the selected simulator runtime is recorded in the test phase logs.
 - **App target**: CarbonApp.swift (welcome + camera placeholder), XcodeGen project spec (project.yml), Info.plist, color tokens (Remjet, Receipt, CarbonInk, etc.)
 
 **Status detail:** `docs/SET01-execution-report.md`, `docs/roadmap-progress.md`
@@ -111,7 +111,7 @@ workflow on the same branch or pull request.
 The macOS jobs pin Xcode 26.3 and cache its content-addressed compilation outputs
 by compiler build, SDK build, runner architecture, and job. Each commit saves an
 updated cache snapshot; a cold cache still builds normally. Unit and UI tests
-boot one iPhone simulator on the newest eligible runtime while `build-for-testing` compiles,
+boot one iPhone simulator on the newest available runtime while `build-for-testing` compiles,
 then use `test-without-building` on that same simulator. Each test job's summary
 reports destination selection, compilation, the remaining simulator wait, and
 test execution times. Phase logs are also uploaded for startup diagnostics.

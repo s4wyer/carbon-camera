@@ -1,6 +1,7 @@
+import json
 import unittest
 
-from select_simulator import select_simulator
+from select_simulator import select_available_simulator, select_simulator
 
 
 IOS_18 = 'A5B144E6-A071-4106-B457-76AA34C952DD'
@@ -17,6 +18,28 @@ def destinations(*lines):
 
 
 class SimulatorSelectionTests(unittest.TestCase):
+    def test_simctl_selects_latest_available_iphone_and_ignores_other_devices(self):
+        def device(device_id, name='iPhone 16', available=True):
+            return {'udid': device_id, 'name': name, 'isAvailable': available}
+
+        output = json.dumps({'devices': {
+            'com.apple.CoreSimulator.SimRuntime.iOS-18-5': [device(IOS_18)],
+            'com.apple.CoreSimulator.SimRuntime.iOS-26-0': [device(IOS_26)],
+            'com.apple.CoreSimulator.SimRuntime.iOS-26-2': [
+                device(IOS_26_NEWER), device('placeholder'),
+            ],
+            'com.apple.CoreSimulator.SimRuntime.iOS-26-3': [
+                device(IOS_26_NEWER, available=False), device(IOS_26_NEWER, name='iPad Pro'),
+            ],
+            'com.apple.CoreSimulator.SimRuntime.tvOS-27-0': [device(IOS_26_NEWER)],
+        }})
+        self.assertEqual(select_available_simulator(output), IOS_26_NEWER)
+        self.assertEqual(select_available_simulator(output, ios_major=18), IOS_18)
+
+    def test_simctl_fails_when_no_available_iphone_exists(self):
+        with self.assertRaisesRegex(ValueError, 'No available iPhone'):
+            select_available_simulator(json.dumps({'devices': {}}))
+
     def test_requires_ios_26_instead_of_first_available_runtime(self):
         output = destinations(destination(IOS_18, '18.2'), destination(IOS_26, '26.0'))
         self.assertEqual(select_simulator(output, ios_major=26), IOS_26)

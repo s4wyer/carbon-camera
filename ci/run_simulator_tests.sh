@@ -43,10 +43,12 @@ trap cleanup EXIT
 
 printf '### %s timings\n\n| Phase | Duration |\n| --- | ---: |\n' "$TEST_TARGET" >> "$SUMMARY_FILE"
 STARTED=$SECONDS
-xcodebuild -showdestinations -project Carbon.xcodeproj -scheme Carbon \
-  2>&1 | tee "build/$RESULT_NAME-destinations.log"
-DEVICE=$(python3 ../ci/select_simulator.py < "build/$RESULT_NAME-destinations.log")
-record_timing "Select eligible iPhone simulator" "$((SECONDS - STARTED))"
+# Query CoreSimulator directly: Xcode can initially report only generic
+# placeholders before the simulator service has enumerated its devices.
+xcrun simctl list devices available -j \
+  | tee "build/$RESULT_NAME-destinations.log"
+DEVICE=$(python3 ../ci/select_simulator.py --simctl-json < "build/$RESULT_NAME-destinations.log")
+record_timing "Select available iPhone simulator" "$((SECONDS - STARTED))"
 echo "Selected simulator: $DEVICE"
 
 # bootstatus -b boots a shut-down device and blocks until it is ready. Let it

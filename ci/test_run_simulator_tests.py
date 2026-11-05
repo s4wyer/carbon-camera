@@ -27,10 +27,6 @@ class SimulatorRunnerTests(unittest.TestCase):
         self.write_command('xcodebuild', f'''#!/bin/bash
 set -euo pipefail
 case "$1" in
-  -showdestinations)
-    echo 'Available destinations for the "Carbon" scheme:'
-    echo "{{ platform:iOS Simulator, id:{DEVICE}, OS:${{MOCK_IOS_VERSION:-26.2}}, name:iPhone 16 }}"
-    ;;
   build-for-testing)
     echo build-start >> ../events
     touch build/build-started
@@ -60,6 +56,10 @@ esac
         self.write_command('xcrun', '''#!/bin/bash
 set -euo pipefail
 case "$2" in
+  list)
+    version="${MOCK_IOS_VERSION:-26.2}"
+    printf '{"devices":{"com.apple.CoreSimulator.SimRuntime.iOS-%s":[{"udid":"EDC4F281-97FB-4004-B8FA-3ED2BD36749C","name":"iPhone 16","isAvailable":true}]}}\\n' "${version//./-}"
+    ;;
   bootstatus)
     echo boot-start >> ../events
     touch build/boot-requested
