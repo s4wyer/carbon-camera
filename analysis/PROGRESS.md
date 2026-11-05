@@ -1,83 +1,104 @@
 # Preset analysis: progress and handoff
 
-Read this first if you are picking the work up. It records what is verified,
-what is assumed, and what is next. Do not repeat claims marked DISPROVED.
+Read this before continuing. It separates what is measured from what is
+assumed. Do not repeat anything listed under "Disproved".
 
 ## Goal
 
-Measure all 34 Carbon presets (`PresetLibrary.all`) through the app's real
-render path and generate `presets.json` (single source of truth) and
+Measure all 34 presets in `PresetLibrary.all` through Carbon's real render
+path, then generate `presets.json` (single source of truth) and
 `PRESETS_GUIDE.md` (generated from it) for non-photographers.
 
-## Branches and worktrees
+## Status: blocked on render bugs
 
-| Worktree | Branch | Owner | Purpose |
-|---|---|---|---|
-| `~/Downloads/carbon-worktrees/guide` | `analysis/preset-guide` | analysis | this folder, harness, CI workflow |
-| `~/Downloads/carbon-worktrees/presets` | `analysis/preset-measurements` | camera/Lapse subagent | Lapse capture + `LapseRenderer.swift` |
-| `~/Downloads/carbon-plan` | (other work) | operator | do not write here |
+Measurement works end to end, but the renders contain bugs that would end up
+described as "looks". Ratings and copy are not written. `rate.py` was drafted
+with hand-written copy based on film reputation and was deleted on purpose;
+rewrite it so every rating and sentence comes from `metrics.json`.
 
-Both analysis branches start at `main` 90a1608. The Lapse branch is merged
-into this one before the final measurement run so Journal / Photo Default are
-measured through the real Lapse render path.
+## Branch and worktrees
+
+| Worktree | Branch | Notes |
+|---|---|---|
+| `~/Downloads/carbon-worktrees/guide` | `analysis/preset-guide` (pushed) | analysis, harness, Lapse code, CI fixes |
+| `~/Downloads/carbon-worktrees/presets` | `analysis/preset-measurements` (local) | subagent's original Lapse commits; cherry-picked into guide |
+| `~/Downloads/carbon-plan` | operator's checkout | do not write here |
 
 ## Pipeline
 
 ```
-python analysis/generate_scenes.py        -> analysis/refs/*.png + regions.json   (done)
-CI: .github/workflows/preset-harness.yml  -> artifact "preset-renders"           (built, first run pending)
-    runs analysis/harness/run_render.sh on macos-15: compiles production
-    PhotoRenderer, LUTLoader, LUTResources, PresetCatalog into a macOS package
-    and renders _baseline + 34 presets x 11 scenes via renderPreview.
-python analysis/measure.py                -> internal metrics                    (todo)
-python analysis/rate.py                   -> ratings, duplicates, copy          (todo)
-python analysis/generate_guide.py         -> PRESETS_GUIDE.md                    (todo)
+python analysis/validate.py         tooling checks (passing)
+python analysis/generate_scenes.py  -> analysis/refs/*.png + regions.json (committed)
+push to analysis/** branch          -> CI "Preset measurement harness" (macos-15)
+                                       artifact "preset-renders"
+gh run download <id> -n preset-renders -D analysis/renders
+python analysis/measure.py          -> analysis/.cache/metrics.json
 ```
+
+The harness (`analysis/harness/run_render.sh`) compiles the production
+`PhotoRenderer`, `LapseRenderer`, `LUTLoader`, `LUTResources`, `PresetCatalog`
+and friends into a macOS package. It renders `_baseline` (neutral params),
+all 34 presets, and `_diag-<id>-{nograin,nohalation,lutonly}` stage-isolation
+variants for Natural, Process Zero, Neutral Classic, and Elysia.
+`measure.py` skips every id starting with `_` when it compares presets.
 
 ## Verified
 
-- Catalog count is 34: 1 Carbon, 11 Halide, 20 No Fusion, 2 Lapse
-  (parsed from the `all` array in `PresetCatalog.swift`).
-- No Fusion name mapping comes from the original `.preset` plists via
-  `nofusion-recovered/preset_lut_map.csv`; it matches the lutIDs in
-  `PresetCatalog.swift`. Note the files' stored `name` differs from the file
-  ID (e.g. H2.preset stores K1 = Kodak Portra 400). Use descriptions, not codes.
-- LUT layout is red-fastest for Halide and No Fusion: identity-permutation fit on
-  Process Zero is 0.163 for rgb vs 0.353 for the next best (`validate.py`).
-- Lapse V4-02 / V4-03 cubes in `~/Downloads/com.lapse.journal-4.1.1-eeveedecrypter.ipa`
-  match the SHA-256 values in `docs/reference/lapse-camera-settings.md` §8.
+- 34 presets: 1 Carbon, 11 Halide, 20 No Fusion, 2 Lapse.
+- No Fusion names come from the original `.preset` plists
+  (`nofusion-recovered/preset_lut_map.csv`). File IDs differ from stored
+  names (H2.preset stores K1 = Kodak Portra 400). Use descriptions.
+- LUT layout is red-fastest (permutation fit 0.163 vs next best 0.353).
+- The numpy LUT path matches the app: with halation off, Process Zero at
+  input 0.522 renders 0.583 in-app vs 0.585 predicted; Neutral Classic
+  0.554 vs 0.566.
+- Lapse V4-03 cube matches lapse-camera-settings.md section 8 SHA-256.
+  `.gitattributes` pins LUT line endings; `ci/check_assets.py` checks the hash.
+- `strength` is never read by `PhotoRenderer`.
+- No Fusion "BW1" (display name Eternal) renders full color (chart chroma
+  x1.35). Its original plist has `mono = False`, so this is the source data,
+  not a Carbon bug. The BW1 file ID is misleading; BW2 to BW4 are mono.
 
-## Findings that change the guide
+## Render bugs found (gray-ramp means, input -> output)
 
-- DISPROVED: "Process Zero is near-identity." On sRGB-gamma input it crushes
-  everything below ~0.15 to 0 and clips above ~0.8 (`validate.py` prints it).
-- All 11 Halide LUTs share that flat toe; No Fusion LUTs do not.
-- Fitting Process Zero for identity behaviour: Apple Log input gives mean error
-  0.035 with no flat steps, sRGB gamma gives 0.123 with 69 flat steps. The
-  Halide cubes most likely expect Apple Log (scene) input. UNPROVEN: residual is
-  not zero and gamut was not confirmed.
-- Carbon feeds those cubes sRGB-encoded values (`CIColorCubeWithColorSpace`
-  with sRGB). So the app's current Halide looks are darker and harsher than
-  Halide's. The guide must describe what Carbon renders; the encoding mismatch
-  is reported to the operator as a likely bug, not fixed here.
-- Natural in `PresetCatalog.swift`: grain 0.4, halation intensity 0.3,
-  bloom 0.0. D-025 says Natural grain should be 0. Conflict reported; the
-  measurement uses the catalog.
-- `strength` is never read by `PhotoRenderer`; it has no effect on renders.
-- On main, every LUT preset except Natural has halation intensity 1.0
-  (CIBloom radius 4, screen-blended). This is a strong shared effect; the
-  `_baseline` render exists to separate it from each look.
+1. Natural grain. Natural: 0.522 -> 0.291 with pixel std 0.334.
+   Same preset with grain 0: 0.522 -> 0.890, std 0.000. Grain is the cause.
+   Code read: `PhotoRenderer.applyGrain` builds a black layer whose alpha is
+   the noise value (`inputAVector` x=1 copies the noise red channel into
+   alpha) and source-overs it, so the image is darkened by a random
+   per-pixel amount near 50 %. Likely intent: low-opacity noise. Not fixed.
+2. Shared halation brightens midtones on every LUT preset. Process Zero
+   0.522 -> 0.910 with halation, 0.583 without. Neutral Classic 0.763 vs
+   0.554. This happens on flat gray, so it is not a highlight-only effect,
+   which contradicts D-018's luma thresholds .92-.95. 33 of 34 presets use
+   intensity 1.0 (Natural 0.3). Not fixed.
+3. Halide input encoding. Even with halation off, Process Zero crushes to 0
+   below about 0.15 and clips above about 0.75. Apple Log input fits Process
+   Zero far better than sRGB (mean error 0.035 vs 0.123) but this is a fit,
+   not proof. Carbon feeds sRGB-encoded values. Elysia renders landscape
+   foliage magenta; the cause is not isolated.
+4. Lapse renderer (Core Image reconstruction, not validated against Lapse).
+   Journal: 0.388 -> 0.918, everything at or above 0.522 clips to 1.0.
+   Photo Default: compresses to about 0.2-0.58 and is non-monotonic
+   (0.780 -> 0.518 is darker than 0.522 -> 0.576). Causes not isolated; add
+   per-stage diagnostics for LapseRenderer before guessing.
 
-## Not reproducible off-device
+## Decisions needed from the operator
 
-CIHighlightShadowAdjust, CIBloom, CIRandomGenerator grain, and the Lapse
-private filters. That is why rendering runs on macOS CI and Python only
-measures pixels.
+- Fix bugs 1, 2 (and 4) before measuring, or document current behavior?
+- Bug 3: change Carbon's Halide input encoding, or ship the current look?
 
-## Next steps
+## Disproved
 
-1. Push this branch; confirm the first harness run compiles and renders.
-2. `measure.py`: tone curve, clipping, contrast, chroma/hue by region, white
-   balance, skin drift, texture, all in OKLab/OKLCH from the downloaded renders.
-3. Merge the Lapse branch, rerun the harness, re-measure.
-4. `rate.py`, duplicates, copy; `generate_guide.py`; one `run_all.py` entry.
+- "Process Zero is near-identity."
+- "Natural has a gentle film glow" (current render is dark and noisy).
+- "Eternal is black and white."
+- First-pass numbers from the deleted analyze_presets.py and old guide.
+
+## Next steps once unblocked
+
+1. Fix agreed bugs as separate commits; push; download new artifact.
+2. Re-run `measure.py`; rebuild contact sheets (see snippet in git history
+   of this file's commit message) and look at them.
+3. Write `rate.py` (named thresholds, every Great/Avoid traced to a metric,
+   copy composed from measured traits), `generate_guide.py`, `run_all.py`.
