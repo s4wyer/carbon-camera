@@ -132,7 +132,10 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
     
     // MARK: - Source Loading
     
-    func loadSourceImage(shot: Shot) -> CIImage? {
+    func loadSourceImage(
+        shot: Shot,
+        decode: (URL) -> CIImage? = { PhotoGeometry.sourceImage(at: $0) }
+    ) -> CIImage? {
         // Prefer the recipe's original, regardless of array order. Do not feed
         // a processed safety image into a RAW recipe while its RAW still exists.
         let stillTypes: [SourceResource.SourceType] = [.rawBayer, .rawAppleProRAW, .processedHEVC, .processedHEIFPlus]
@@ -143,14 +146,14 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         for type in types {
             for source in shot.sources where source.type == type {
                 if FileManager.default.fileExists(atPath: source.mediaURL.path) {
-                    return PhotoGeometry.sourceImage(at: source.mediaURL)
+                    return decode(source.mediaURL)
                 }
             }
             // Check the original's journal path before trying a different type.
             let ext = [.rawBayer, .rawAppleProRAW].contains(type) ? "dng" : "heic"
             let candidate = journal.fileURL(for: "\(shot.captureID).\(ext)")
             if FileManager.default.fileExists(atPath: candidate.path) {
-                return PhotoGeometry.sourceImage(at: candidate)
+                return decode(candidate)
             }
         }
         

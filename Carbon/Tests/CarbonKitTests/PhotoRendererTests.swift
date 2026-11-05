@@ -230,9 +230,25 @@ final class PhotoRendererTests: XCTestCase {
         let safetyURL = try makePNG(width: 8, height: 8)
         let safetySource = makeShot(sourceURL: safetyURL).sources[0]
         let shot = makeShot(sourceURL: rawURL, sourceType: .rawBayer, extraSources: [safetySource])
-        let source = try XCTUnwrap(renderer.loadSourceImage(shot: shot))
+        // Source selection is independent of platform RAW decoder availability.
+        var decodedURLs: [URL] = []
+        let expected = CIImage(color: CIColor(red: 0.2, green: 0.2, blue: 0.2))
+            .cropped(to: CGRect(x: 0, y: 0, width: SyntheticRAWFixture.width,
+                               height: SyntheticRAWFixture.height))
+        let source = try XCTUnwrap(renderer.loadSourceImage(shot: shot) { url in
+            decodedURLs.append(url)
+            return url == rawURL ? expected : nil
+        })
+        XCTAssertEqual(decodedURLs, [rawURL])
         XCTAssertEqual(source.extent.width, CGFloat(SyntheticRAWFixture.width))
         XCTAssertEqual(source.extent.height, CGFloat(SyntheticRAWFixture.height))
+
+        decodedURLs.removeAll()
+        XCTAssertNil(renderer.loadSourceImage(shot: shot) { url in
+            decodedURLs.append(url)
+            return nil
+        })
+        XCTAssertEqual(decodedURLs, [rawURL], "A failed RAW decode must not try the safety image")
 
         // An existing but undecodable RAW must fail rather than silently using
         // either its embedded preview or the processed safety image.

@@ -32,6 +32,7 @@ final class RAWDevelopmentTests: XCTestCase {
 
     func testPureRAWControlsPreserveCameraCalibration() throws {
         let raw = try XCTUnwrap(CIRAWFilter(imageURL: fixture(neutral: [1, 0.85, 0.6])))
+        print("RAW diagnostic before configuration: size=\(raw.nativeSize) decoders=\(raw.supportedDecoderVersions) output=\(String(describing: raw.outputImage))")
         let temperature = raw.neutralTemperature
         let tint = raw.neutralTint
         let orientation = raw.orientation
@@ -119,5 +120,15 @@ final class RAWDevelopmentTests: XCTestCase {
         let url = try fixture()
         try Data("not a RAW image".utf8).write(to: url)
         XCTAssertNil(PhotoGeometry.sourceImage(at: url))
+    }
+
+    func testEmptyAndTruncatedDNGAreRejectedForFullSizeAndPreview() throws {
+        let url = try fixture()
+        let validData = try Data(contentsOf: url)
+        for data in [Data(), Data(validData.prefix(8)), Data(validData.prefix(512))] {
+            try data.write(to: url)
+            XCTAssertNil(PhotoGeometry.sourceImage(at: url))
+            XCTAssertNil(PhotoGeometry.sourceImage(at: url, maxPixelSize: 160))
+        }
     }
 }

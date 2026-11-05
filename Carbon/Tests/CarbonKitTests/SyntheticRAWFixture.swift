@@ -44,10 +44,14 @@ enum SyntheticRAWFixture {
             (50710, 1, 3, Data([0, 1, 2])), short(50711, 1),
             (50713, 3, 2, words([1, 1])),
             (50714, 5, 1, rationals([0])), long(50717, 65535),
+            (50718, 5, 2, rationals([1, 1])), // DefaultScale.
+            (50719, 4, 2, integers([0, 0])), // DefaultCropOrigin.
+            (50720, 4, 2, integers([UInt32(width), UInt32(height)])), // DefaultCropSize.
             (50721, 10, 9, integers(matrix.flatMap { [UInt32(bitPattern: $0), 100000] })),
             (50728, 5, 3, rationals(neutral)),
             (50730, 10, 1, integers([0, 1])), // BaselineExposure = zero EV.
-            short(50778, 21) // CalibrationIlluminant1 = D65.
+            short(50778, 21), // CalibrationIlluminant1 = D65.
+            (50829, 4, 4, integers([0, 0, UInt32(height), UInt32(width)])) // ActiveArea.
         ]
         entries.sort { $0.tag < $1.tag }
         let payloadStart = 8 + 2 + entries.count * 12 + 4
