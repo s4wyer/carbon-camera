@@ -46,6 +46,12 @@ public class LUTResources {
     }
     
     private func loadFromBundle(lutID: String) throws -> LUTData {
+        if lutID == "lapse-v4-03" {
+            guard let url = Bundle.main.url(forResource: "Lapse-V4-03", withExtension: "cube", subdirectory: "LUTs/lapse") else {
+                throw LUTError.resourceNotFound("lapse/Lapse-V4-03.cube")
+            }
+            return try LapseCubeLoader.load(data: Data(contentsOf: url))
+        }
         // Halide LUTs: "halide-{look}-sdr" → "Resources/LUTs/halide/{Look}SDR.ccube"
         if lutID.hasPrefix("halide-") {
             // Explicit map from preset lutID to bundled .ccube basename.

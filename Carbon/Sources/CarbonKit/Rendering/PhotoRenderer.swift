@@ -76,11 +76,18 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         }
         try cancellation.throwIfCancelled()
 
-        let processedImage = try applyToneChain(
-            to: PhotoGeometry.applying(shot.currentRecipe.crop, to: sourceImage),
-            parameters: parameters,
-            cancellation: cancellation
-        )
+        let croppedImage = PhotoGeometry.applying(shot.currentRecipe.crop, to: sourceImage)
+        let processedImage: CIImage
+        if case .lapseReference(let factory, _) = preset.source {
+            processedImage = try LapseRenderer.render(
+                croppedImage,
+                look: factory == "journal" ? .journal : .photoDefault,
+                sceneEV: shot.captureMetadata?.sceneEV ?? 8.0,
+                loadLUT: loadLUT
+            )
+        } else {
+            processedImage = try applyToneChain(to: croppedImage, parameters: parameters, cancellation: cancellation)
+        }
         try cancellation.throwIfCancelled()
 
         let outputData = try encodeOutput(processedImage)
@@ -111,17 +118,29 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
     /// Quick preview render (returns CIImage for live metal view)
     func renderPreview(
         image: CIImage,
-        parameters: PresetParameters
+        parameters: PresetParameters,
+        preset: PresetDefinition? = nil,
+        sceneEV: Float = 8.0
     ) async throws -> CIImage {
         let sendableImage = UncheckedSendable(image)
         return try await withCheckedThrowingContinuation { continuation in
             renderQueue.async { [self, sendableImage] in
                 do {
-                    let result = try applyToneChain(
-                        to: sendableImage.value,
-                        parameters: parameters,
-                        cancellation: RenderCancellationToken()
-                    )
+                    let result: CIImage
+                    if let preset, case .lapseReference(let factory, _) = preset.source {
+                        result = try LapseRenderer.render(
+                            sendableImage.value,
+                            look: factory == "journal" ? .journal : .photoDefault,
+                            sceneEV: sceneEV,
+                            loadLUT: loadLUT
+                        )
+                    } else {
+                        result = try applyToneChain(
+                            to: sendableImage.value,
+                            parameters: parameters,
+                            cancellation: RenderCancellationToken()
+                        )
+                    }
                     continuation.resume(returning: result)
                 } catch {
                     continuation.resume(throwing: error)

@@ -620,7 +620,7 @@ extension PresetLibrary {
         displayName: "Journal",
         description: "Lapse's default CI look.",
         source: .lapseReference(factoryName: "journal", section: "§5"),
-        baseParameters: neutralParams(lutID: ""),  // No LUT, procedural
+        baseParameters: neutralParams(lutID: "lapse-v4-03"),
         carbonDeltas: [],
         engineVersion: "1.0",
         displayOrder: 300,
@@ -633,7 +633,7 @@ extension PresetLibrary {
         displayName: "Photo Default",
         description: "Lapse's Metal photo pipeline.",
         source: .lapseReference(factoryName: "photo_default", section: "§7"),
-        baseParameters: neutralParams(lutID: ""),  // No LUT, procedural
+        baseParameters: neutralParams(lutID: "lapse-v4-03"),
         carbonDeltas: [],
         engineVersion: "1.0",
         displayOrder: 301,

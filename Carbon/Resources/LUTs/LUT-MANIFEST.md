@@ -1,6 +1,6 @@
 # LUT Resources Manifest
 
-**Total LUTs:** 44 files (24 Halide .ccube, 20 No Fusion .lutbin)
+**Total LUTs:** 45 files (24 Halide .ccube, 20 No Fusion .lutbin, 1 Lapse .cube)
 
 ## Halide LUTs (24 files, 33³ LZFSE-compressed half-float RGB)
 
