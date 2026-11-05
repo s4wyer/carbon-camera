@@ -48,10 +48,10 @@ path, root = sys.argv[1], sys.argv[2]
 src = open(path).read()
 src = src.replace(
     'guard let url = Bundle.main.url(forResource: ccubeFilename, withExtension: "ccube", subdirectory: "LUTs/halide") else {',
-    f'guard let url = URL(fileURLWithPath: "{root}/Carbon/Resources/LUTs/halide/" + ccubeFilename + ".ccube"), FileManager.default.fileExists(atPath: url.path) else {{')
+    f'guard let url = Optional(URL(fileURLWithPath: "{root}/Carbon/Resources/LUTs/halide/" + ccubeFilename + ".ccube")), FileManager.default.fileExists(atPath: url.path) else {{')
 src = src.replace(
     'guard let url = Bundle.main.url(forResource: hash, withExtension: "lutbin", subdirectory: "LUTs/nofusion") else {',
-    f'guard let url = URL(fileURLWithPath: "{root}/Carbon/Resources/LUTs/nofusion/" + hash + ".lutbin"), FileManager.default.fileExists(atPath: url.path) else {{')
+    f'guard let url = Optional(URL(fileURLWithPath: "{root}/Carbon/Resources/LUTs/nofusion/" + hash + ".lutbin")), FileManager.default.fileExists(atPath: url.path) else {{')
 # Fail loudly if a Bundle.main lookup survives (e.g. a new LUT family was added).
 if 'Bundle.main' in src:
     raise SystemExit("LUTResources still references Bundle.main; extend run_render.sh")
