@@ -104,8 +104,8 @@ CI validates the finished IPA's ZIP structure, bundle metadata, ARM64 device
 executable, primary icon PNGs, and bundled resources before uploading it.
 
 The archive, iOS unit tests, UI screenshots, and Python verification run as
-independent jobs. An IPA can be downloaded before tests finish; check all four
-jobs before treating that commit as verified. New runs cancel older runs of this
+independent jobs. An IPA can be downloaded before tests finish; check all CI
+results before treating that commit as verified. New runs cancel older runs of this
 workflow on the same branch or pull request.
 
 The macOS jobs pin Xcode 26.3 and cache its content-addressed compilation outputs
@@ -129,7 +129,14 @@ only after fixture thumbnails, native sheets, layout, and scroll positions settl
 three top/selected Stock images show the same state; middle and bottom captures
 use normalized scroll positions of 0.5 and 1. Capture metadata ships with the PNGs.
 
-PNGs upload before XCTest starts. All six navigation, permission, accessibility,
+PNGs upload before XCTest starts. A separate lightweight Linux job watches for
+the artifact, publishes the inline gallery, and finishes immediately. This is
+necessary because GitHub only displays a job's summary after that job finishes;
+putting the summary step earlier in the macOS job still waits for the UI suite.
+The publisher has no dependency on completion of the macOS job and also handles
+capture failures and workflow reruns.
+
+All six navigation, permission, accessibility,
 and transition UI tests then run on that same booted device. The harness images
 verify rendered fixture states; they are not evidence that navigation passed.
 The full UI result bundle retains its own screenshot attachments. The harness is
