@@ -2,10 +2,14 @@ import CoreImage
 
 /// Shared geometry for development, source previews, and exports.
 enum PhotoGeometry {
-    static func sourceImage(at url: URL) -> CIImage? {
-        if url.pathExtension.lowercased() == "dng",
-           let raw = CIRAWFilter(imageURL: url), let image = raw.outputImage {
-            return image
+    static func sourceImage(at url: URL, maxPixelSize: CGFloat? = nil) -> CIImage? {
+        if RAWDevelopment.isRAW(url) {
+            // A failed RAW decode must not fall through to a rendered DNG preview.
+            guard let raw = RAWDevelopment.filter(at: url) else { return nil }
+            if let maxPixelSize, maxPixelSize > 0 {
+                raw.scaleFactor = Float(min(1, maxPixelSize / max(raw.nativeSize.width, raw.nativeSize.height)))
+            }
+            return raw.outputImage
         }
         return CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
     }

@@ -8,14 +8,16 @@ import os.log
 /// Photo renderer: Applies ToneChain preset pipeline to captured RAW+HEVC photos
 /// Implements D-005 render order with CIContext and 3D color cubes for deterministic output.
 final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
+    static let engineVersion = "ci-metal-tonechain-pure-raw-v1"
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let ciContext: CIContext
-    private let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+    private let loadLUT: (String) throws -> LUTData
+    private let colorSpace = CIContextProvider.outputColorSpace
     private let logger = Logger(subsystem: "app.carbon", category: "PhotoRenderer")
     private let renderQueue = DispatchQueue(label: "app.carbon.photo-renderer", qos: .utility)
     
-    init?() {
+    init?(loadLUT: @escaping (String) throws -> LUTData = { try LUTResources.shared.load(lutID: $0) }) {
         guard let device = MTLCreateSystemDefaultDevice(),
               let commandQueue = device.makeCommandQueue() else {
             Logger(subsystem: "app.carbon", category: "PhotoRenderer")
@@ -25,12 +27,10 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         
         self.device = device
         self.commandQueue = commandQueue
+        self.loadLUT = loadLUT
         self.ciContext = CIContext(
             mtlDevice: device,
-            options: [
-                .workingColorSpace: colorSpace,
-                .outputColorSpace: colorSpace
-            ]
+            options: CIContextProvider.renderingOptions
         )
         
         logger.info("PhotoRenderer initialized with Metal-backed CIContext")
@@ -101,7 +101,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
             outputFormat: .heif,
             outputURL: outputURL,
             outputHash: hashString,
-            renderingEngine: "ci-metal-tonechain"
+            renderingEngine: Self.engineVersion
         )
 
         logger.info("Render complete: revision=\(revision.id), sha256=\(hashString)")
@@ -132,28 +132,31 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
     
     // MARK: - Source Loading
     
-    private func loadSourceImage(shot: Shot) -> CIImage? {
-        // Priority 1: Check primary SourceResource URL
-        for source in shot.sources {
-            if FileManager.default.fileExists(atPath: source.mediaURL.path) {
-                return PhotoGeometry.sourceImage(at: source.mediaURL)
-            }
-        }
-        
-        // Priority 2: Try journal base directory
+    func loadSourceImage(shot: Shot) -> CIImage? {
+        // Prefer the recipe's original, regardless of array order. Do not feed
+        // a processed safety image into a RAW recipe while its RAW still exists.
+        let stillTypes: [SourceResource.SourceType] = [.rawBayer, .rawAppleProRAW, .processedHEVC, .processedHEIFPlus]
+        let preferred = shot.currentRecipe.source
+        let types = stillTypes.contains(preferred)
+            ? [preferred] + stillTypes.filter { $0 != preferred } : stillTypes
         let journal = CaptureJournal.shared
-        let candidateHEIC = journal.fileURL(for: "\(shot.captureID).heic")
-        if FileManager.default.fileExists(atPath: candidateHEIC.path) {
-            return PhotoGeometry.sourceImage(at: candidateHEIC)
-        }
-        let candidateDNG = journal.fileURL(for: "\(shot.captureID).dng")
-        if FileManager.default.fileExists(atPath: candidateDNG.path) {
-            return PhotoGeometry.sourceImage(at: candidateDNG)
+        for type in types {
+            for source in shot.sources where source.type == type {
+                if FileManager.default.fileExists(atPath: source.mediaURL.path) {
+                    return PhotoGeometry.sourceImage(at: source.mediaURL)
+                }
+            }
+            // Check the original's journal path before trying a different type.
+            let ext = [.rawBayer, .rawAppleProRAW].contains(type) ? "dng" : "heic"
+            let candidate = journal.fileURL(for: "\(shot.captureID).\(ext)")
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return PhotoGeometry.sourceImage(at: candidate)
+            }
         }
         
         return nil
     }
-    
+
     // MARK: - D-005 Pipeline Implementation
     
     private func applyToneChain(
@@ -164,26 +167,10 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         var current = inputImage
         try cancellation.throwIfCancelled()
         
-        // 1. Exposure (EV bias)
-        if abs(parameters.exposureEV) > 0.001 {
-            current = applyExposure(to: current, ev: parameters.exposureEV)
-        }
-        
-        try cancellation.throwIfCancelled()
-
-        // 2. White Balance (Temperature + Tint)
-        if abs(parameters.temperatureOffsetK) > 0.1 || abs(parameters.tintOffset) > 0.001 {
-            current = applyTemperatureAndTint(
-                to: current,
-                tempK: parameters.temperatureOffsetK,
-                tint: parameters.tintOffset
-            )
-        }
-        
-        // 3. Highlight Shoulder
+        // 1. Highlight shoulder in linear light, separate from RAW development.
         current = applyHighlightShoulder(to: current)
         
-        // 4. Halation
+        // 2. Halation
         if parameters.halationIntensity > 0.001 {
             current = applyHalation(
                 to: current,
@@ -192,7 +179,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
             )
         }
         
-        // 5. Bloom
+        // 3. Bloom
         if parameters.bloomAmount > 0.001 {
             current = applyBloom(
                 to: current,
@@ -203,13 +190,35 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         
         try cancellation.throwIfCancelled()
 
-        // 6. 3D LUT (No Fusion or Halide cube)
+        // 4. Vignette (D-005: before the LUT).
+        if parameters.vignetteIntensity > 0.001 {
+            current = applyVignette(
+                to: current,
+                intensity: parameters.vignetteIntensity,
+                radius: parameters.vignetteRadius
+            )
+        }
+
+        // 5. 3D LUT. CIColorCubeWithColorSpace handles the conversion between
+        // the linear working buffer and the cube's encoded sRGB domain.
         if let lutID = parameters.lutID, !lutID.isEmpty {
             current = try applyLUT(
                 to: current,
                 lutID: lutID,
                 intensity: parameters.lutIntensity,
                 cancellation: cancellation
+            )
+        }
+
+        // 6. Creative exposure and white balance follow the LUT (D-005/007/008).
+        if abs(parameters.exposureEV) > 0.001 {
+            current = applyExposure(to: current, ev: parameters.exposureEV)
+        }
+        if abs(parameters.temperatureOffsetK) > 0.1 || abs(parameters.tintOffset) > 0.001 {
+            current = applyTemperatureAndTint(
+                to: current,
+                tempK: parameters.temperatureOffsetK,
+                tint: parameters.tintOffset
             )
         }
         
@@ -233,18 +242,9 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         // 10. Per-color HSL
         current = applyHSLAdjustments(to: current, adjustments: parameters.hsl)
         
-        // 11. Vignette
-        if parameters.vignetteIntensity > 0.001 {
-            current = applyVignette(
-                to: current,
-                intensity: parameters.vignetteIntensity,
-                radius: parameters.vignetteRadius
-            )
-        }
-        
         try cancellation.throwIfCancelled()
 
-        // 12. Grain
+        // 11. Grain
         if parameters.grainAmount > 0.001 {
             current = applyGrain(
                 to: current,
@@ -399,7 +399,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         cancellation: RenderCancellationToken
     ) throws -> CIImage {
         try cancellation.throwIfCancelled()
-        let lutData = try LUTResources.shared.load(lutID: lutID)
+        let lutData = try loadLUT(lutID)
         try cancellation.throwIfCancelled()
         let rawData = lutData.rgba.withUnsafeBufferPointer { buffer in
             Data(buffer: buffer)
@@ -435,7 +435,7 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
             of: image,
             format: .RGBA8,
             colorSpace: colorSpace,
-            options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.92]
+            options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.95]
         ) {
             return heifData
         }

@@ -16,12 +16,13 @@ final class PhotoRendererTests: XCTestCase {
         super.tearDown()
     }
 
-    private func makeRecipe(crop: RecipeVersion.Crop? = nil) -> RecipeVersion {
+    private func makeRecipe(crop: RecipeVersion.Crop? = nil,
+                            source: SourceResource.SourceType = .processedHEVC) -> RecipeVersion {
         RecipeVersion(
             recipeID: "renderer-test",
             presetDefinitionID: UUID(),
             engineVersion: "test",
-            source: .processedHEVC,
+            source: source,
             parameters: RecipeVersion.Parameters(
                 filmPreset: "Test",
                 filmStrength: 1,
@@ -35,12 +36,14 @@ final class PhotoRendererTests: XCTestCase {
         )
     }
 
-    private func makeShot(sourceURL: URL? = nil, crop: RecipeVersion.Crop? = nil) -> Shot {
-        let recipe = makeRecipe(crop: crop)
-        let sources: [SourceResource] = sourceURL.map {
+    private func makeShot(sourceURL: URL? = nil, crop: RecipeVersion.Crop? = nil,
+                          sourceType: SourceResource.SourceType = .processedHEVC,
+                          extraSources: [SourceResource] = []) -> Shot {
+        let recipe = makeRecipe(crop: crop, source: sourceType)
+        let sources: [SourceResource] = extraSources + (sourceURL.map {
             [SourceResource(
                 captureID: "renderer-test",
-                type: .processedHEVC,
+                type: sourceType,
                 mediaURL: $0,
                 mediaHash: "test-hash",
                 provenance: SourceResource.Provenance(
@@ -50,7 +53,7 @@ final class PhotoRendererTests: XCTestCase {
                     isUserEditable: true
                 )
             )]
-        } ?? []
+        } ?? [])
 
         return Shot(
             captureID: "renderer-test",
@@ -107,6 +110,25 @@ final class PhotoRendererTests: XCTestCase {
 
     private enum TestError: Error {
         case fixtureCreationFailed
+    }
+
+    private func constantLUTRenderer() throws -> PhotoRenderer {
+        guard let renderer = PhotoRenderer(loadLUT: { _ in
+            LUTData(dimension: 2, rgba: Array(repeating: [Float(0.2), 0.35, 0.1, 1], count: 8).flatMap { $0 })
+        }) else { throw XCTSkip("Metal is unavailable") }
+        return renderer
+    }
+
+    private func sample(_ image: CIImage, x: CGFloat = 32, y: CGFloat = 32) -> [Float] {
+        var rgba = [Float](repeating: 0, count: 4)
+        rgba.withUnsafeMutableBytes { bytes in
+            CIContextProvider.shared.render(
+                image, toBitmap: bytes.baseAddress!, rowBytes: 16,
+                bounds: CGRect(x: x, y: y, width: 1, height: 1), format: .RGBAf,
+                colorSpace: CIContextProvider.workingColorSpace
+            )
+        }
+        return rgba
     }
 
     func testRendererRejectsCancellationBeforeSchedulingWork() async throws {
@@ -176,7 +198,7 @@ final class PhotoRendererTests: XCTestCase {
         )
 
         XCTAssertEqual(revision.outputFormat, .heif)
-        XCTAssertEqual(revision.renderingEngine, "ci-metal-tonechain")
+        XCTAssertEqual(revision.renderingEngine, "ci-metal-tonechain-pure-raw-v1")
         XCTAssertEqual(revision.outputHash.count, 64)
         XCTAssertTrue(FileManager.default.fileExists(atPath: revision.outputURL.path))
         try? FileManager.default.removeItem(at: revision.outputURL)
@@ -198,6 +220,84 @@ final class PhotoRendererTests: XCTestCase {
         let output = try XCTUnwrap(CIImage(contentsOf: revision.outputURL))
         XCTAssertEqual(output.extent.width, 64)
         XCTAssertEqual(output.extent.height, 96)
+    }
+
+    func testRAWRecipePrefersDNGOverProcessedSafetyImageRegardlessOfArrayOrder() throws {
+        guard let renderer = PhotoRenderer() else { throw XCTSkip("Metal is unavailable") }
+        let rawURL = FileManager.default.temporaryDirectory.appendingPathComponent("carbon-source-\(UUID()).dng")
+        temporaryURLs.append(rawURL)
+        try SyntheticRAWFixture.data().write(to: rawURL)
+        let safetyURL = try makePNG(width: 8, height: 8)
+        let safetySource = makeShot(sourceURL: safetyURL).sources[0]
+        let shot = makeShot(sourceURL: rawURL, sourceType: .rawBayer, extraSources: [safetySource])
+        let source = try XCTUnwrap(renderer.loadSourceImage(shot: shot))
+        XCTAssertEqual(source.extent.width, CGFloat(SyntheticRAWFixture.width))
+        XCTAssertEqual(source.extent.height, CGFloat(SyntheticRAWFixture.height))
+
+        // An existing but undecodable RAW must fail rather than silently using
+        // either its embedded preview or the processed safety image.
+        try Data("broken DNG".utf8).write(to: rawURL)
+        XCTAssertNil(renderer.loadSourceImage(shot: shot))
+    }
+
+    func testProcessedRecipeSkipsAuxiliaryImagesAndStillUsesItsDeclaredSource() throws {
+        guard let renderer = PhotoRenderer() else { throw XCTSkip("Metal is unavailable") }
+        let auxiliaryURL = try makePNG(width: 16, height: 16)
+        let auxiliary = makeShot(sourceURL: auxiliaryURL, sourceType: .depthAuxiliary).sources[0]
+        let sourceURL = try makePNG(width: 72, height: 96)
+        let shot = makeShot(sourceURL: sourceURL, extraSources: [auxiliary])
+        let image = try XCTUnwrap(renderer.loadSourceImage(shot: shot))
+        XCTAssertEqual(image.extent.size, CGSize(width: 72, height: 96))
+    }
+
+    func testCreativeExposureFollowsLUTInLinearLight() async throws {
+        let renderer = try constantLUTRenderer()
+        let image = CIImage(color: CIColor(red: 0.12, green: 0.18, blue: 0.24))
+            .cropped(to: CGRect(x: 0, y: 0, width: 64, height: 64))
+        let base = try await renderer.renderPreview(
+            image: image, parameters: PresetParameters(lutID: "constant-test")
+        )
+        let exposed = try await renderer.renderPreview(
+            image: image, parameters: PresetParameters(lutID: "constant-test", exposureEV: 1)
+        )
+        let before = sample(base)
+        let after = sample(exposed)
+        for channel in 0..<3 {
+            XCTAssertGreaterThan(before[channel], 0.001)
+            XCTAssertEqual(after[channel], before[channel] * 2, accuracy: 0.003)
+        }
+    }
+
+    func testCreativeWhiteBalanceFollowsLUT() async throws {
+        let renderer = try constantLUTRenderer()
+        let image = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5))
+            .cropped(to: CGRect(x: 0, y: 0, width: 64, height: 64))
+        let base = try await renderer.renderPreview(
+            image: image, parameters: PresetParameters(lutID: "constant-test")
+        )
+        let warmed = try await renderer.renderPreview(
+            image: image, parameters: PresetParameters(lutID: "constant-test", temperatureOffsetK: 1500)
+        )
+        let before = sample(base)
+        let after = sample(warmed)
+        XCTAssertGreaterThan((0..<3).reduce(Float(0)) { $0 + abs(before[$1] - after[$1]) }, 0.001)
+    }
+
+    func testVignettePrecedesLUT() async throws {
+        let renderer = try constantLUTRenderer()
+        let image = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 256, height: 256))
+        let result = try await renderer.renderPreview(
+            image: image,
+            parameters: PresetParameters(lutID: "constant-test", vignetteIntensity: 1, vignetteRadius: 40)
+        )
+        // A constant cube erases any upstream vignette. A vignette mistakenly
+        // applied after it would darken the corners and fail this property.
+        let corner = sample(result, x: 4, y: 4)
+        let center = sample(result, x: 128, y: 128)
+        for channel in 0..<3 {
+            XCTAssertGreaterThan(center[channel], 0.001)
+            XCTAssertEqual(corner[channel], center[channel], accuracy: 0.001)
+        }
     }
 
     func testRendererPreviewUsesBackgroundRenderQueue() async throws {

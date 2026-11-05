@@ -1,5 +1,5 @@
 // Fast thumbnail generation and caching for Library grid
-// Uses ImageIO downsampling with a persistent disk cache.
+// Uses the shared RAW developer or ImageIO downsampling with a persistent disk cache.
 
 import UIKit
 import CoreImage
@@ -10,7 +10,7 @@ final class PhotoThumbnailCache: @unchecked Sendable {
     static let shared = PhotoThumbnailCache()
 
     private static let targetPixelSize = 512
-    private static let cacheVersion = "v3"
+    private static let cacheVersion = "v4-pure-raw"
 
     private let ciContext = CIContextProvider.shared
     private let cacheDirectory: URL
@@ -71,8 +71,14 @@ final class PhotoThumbnailCache: @unchecked Sendable {
         let cacheURL = cacheDirectory.appendingPathComponent("\(key).jpg")
         let image: UIImage?
 
-        // ImageIO downsamples before decoding, avoiding full-resolution RAW/HEIC buffers.
-        if let sourceImage = CGImageSourceCreateWithURL(source.mediaURL as CFURL, nil) {
+        // RAW thumbnails use the same pure development as the full-size source.
+        // ImageIO may select a camera-rendered embedded preview inside a DNG.
+        if RAWDevelopment.isRAW(source.mediaURL) {
+            guard let ciImage = PhotoGeometry.sourceImage(
+                at: source.mediaURL, maxPixelSize: CGFloat(Self.targetPixelSize)
+            ) else { return nil }
+            image = ciContext.createCGImage(ciImage, from: ciImage.extent).map { UIImage(cgImage: $0) }
+        } else if let sourceImage = CGImageSourceCreateWithURL(source.mediaURL as CFURL, nil) {
             let options: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceThumbnailMaxPixelSize: Self.targetPixelSize,
