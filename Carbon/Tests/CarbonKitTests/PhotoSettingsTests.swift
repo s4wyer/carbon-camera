@@ -6,6 +6,29 @@ import CoreVideo
 final class PhotoSettingsTests: XCTestCase {
     private let qualityLimits: [AVCapturePhotoOutput.QualityPrioritization] = [.speed, .balanced, .quality]
 
+    func testRAWAndProcessedOnlyFormatsFollowPhotoCaptureCompressionContract() throws {
+        let rawFormats: [OSType?] = [nil, kCVPixelFormatType_14Bayer_RGGB]
+        for rawFormat in rawFormats {
+            let settings = CameraManager.makePhotoSettings(
+                rawPixelFormatType: rawFormat,
+                maximumQuality: .quality,
+                flashMode: .off,
+                supportedFlashModes: [.off]
+            )
+            let format = try XCTUnwrap(settings.format)
+
+            // AVFoundation defers some validation until capturePhoto, which
+            // simulator tests cannot exercise with a physical camera. Check
+            // the documented photo-format contract on the real settings object:
+            // https://developer.apple.com/documentation/avfoundation/avcapturephotosettings/init(format:)
+            // Previously quality was nested inside the video-only compression
+            // dictionary; constructing settings and checking the codec missed it.
+            XCTAssertEqual(Set(format.keys), Set([AVVideoCodecKey, AVVideoQualityKey]))
+            XCTAssertEqual(format[AVVideoCodecKey] as? AVVideoCodecType, .hevc)
+            XCTAssertEqual(format[AVVideoQualityKey] as? Double, 0.95)
+        }
+    }
+
     func testBayerRAWPairUsesSpeedAtEveryOutputQualityLimit() {
         for maximumQuality in qualityLimits {
             // Construct the actual AVFoundation object: assigning .quality here

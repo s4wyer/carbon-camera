@@ -349,26 +349,23 @@ final class CameraManager: NSObject, ObservableObject {
         supportedFlashModes: [AVCaptureDevice.FlashMode]
     ) -> AVCapturePhotoSettings {
         let settings: AVCapturePhotoSettings
+        // Photo capture takes quality directly in the format dictionary.
+        // AVVideoCompressionPropertiesKey is for video encoding; nesting quality
+        // there can pass construction and then fail capture-time validation.
+        let processedFormat: [String: Any] = [
+            AVVideoCodecKey: AVVideoCodecType.hevc,
+            AVVideoQualityKey: 0.95
+        ]
 
         // Priority: RAW + HEVC pair (D-002)
         if let rawFormat = rawPixelFormatType {
             settings = AVCapturePhotoSettings(
                 rawPixelFormatType: rawFormat,
-                processedFormat: [
-                    AVVideoCodecKey: AVVideoCodecType.hevc,
-                    AVVideoCompressionPropertiesKey: [
-                        AVVideoQualityKey: 0.95
-                    ]
-                ]
+                processedFormat: processedFormat
             )
         } else {
             // Fallback: HEVC only
-            settings = AVCapturePhotoSettings(format: [
-                AVVideoCodecKey: AVVideoCodecType.hevc,
-                AVVideoCompressionPropertiesKey: [
-                    AVVideoQualityKey: 0.95
-                ]
-            ])
+            settings = AVCapturePhotoSettings(format: processedFormat)
         }
         
         // Flash

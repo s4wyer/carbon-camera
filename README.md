@@ -142,6 +142,18 @@ verify rendered fixture states; they are not evidence that navigation passed.
 The full UI result bundle retains its own screenshot attachments. The harness is
 excluded from Release builds and never runs without the explicit fixture flags.
 
+Camera settings tests construct real `AVCapturePhotoSettings` objects and check
+the photo-format dictionary, RAW quality limits, flash fallback, and unique
+request IDs. These run in the existing unit-test job without another simulator
+or app launch. Construction alone does not validate every setting: AVFoundation
+also validates requests when `capturePhoto(with:delegate:)` is called. The
+sample-photo UI tests do not start a camera session or submit captures, so their
+screenshots cannot verify the shutter. Capture changes still need an iPhone
+smoke test: take repeated photos with flash off/auto/on, confirm each new photo
+appears in Rolls, and verify the retained originals. Simulator contract checks
+cover known request rules with little runtime overhead; camera hardware and
+OS-specific capture behavior require device verification.
+
 ### Building locally
 
 1. Transfer this repository to Mac with Xcode 16+.
