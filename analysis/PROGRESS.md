@@ -9,12 +9,14 @@ Measure all 34 presets in `PresetLibrary.all` through Carbon's real render
 path, then generate `presets.json` (single source of truth) and
 `PRESETS_GUIDE.md` (generated from it) for non-photographers.
 
-## Status: blocked on render bugs
+## Status: render bugs fixed, ratings and copy next
 
-Measurement works end to end, but the renders contain bugs that would end up
-described as "looks". Ratings and copy are not written. `rate.py` was drafted
-with hand-written copy based on film reputation and was deleted on purpose;
-rewrite it so every rating and sentence comes from `metrics.json`.
+The four render bugs below are fixed on `analysis/preset-guide` and verified
+on CI renders (run 42119534797). `measure.py` now reads tone, grain and
+vignette from uniform flat fields (`flat_000`..`flat_100`, linear-luminance
+percent) and glow from `point_light`, so vignette no longer contaminates the
+tone curve. `rate.py` is still unwritten: every rating and sentence must come
+from `metrics.json`, with thresholds as named constants.
 
 ## Branch and worktrees
 
@@ -59,34 +61,27 @@ variants for Natural, Process Zero, Neutral Classic, and Elysia.
   x1.35). Its original plist has `mono = False`, so this is the source data,
   not a Carbon bug. The BW1 file ID is misleading; BW2 to BW4 are mono.
 
-## Render bugs found (gray-ramp means, input -> output)
+## Render bugs (fixed; flat-field centre, sRGB in -> out)
 
-1. Natural grain. Natural: 0.522 -> 0.291 with pixel std 0.334.
-   Same preset with grain 0: 0.522 -> 0.890, std 0.000. Grain is the cause.
-   Code read: `PhotoRenderer.applyGrain` builds a black layer whose alpha is
-   the noise value (`inputAVector` x=1 copies the noise red channel into
-   alpha) and source-overs it, so the image is darkened by a random
-   per-pixel amount near 50 %. Likely intent: low-opacity noise. Not fixed.
-2. Shared halation brightens midtones on every LUT preset. Process Zero
-   0.522 -> 0.910 with halation, 0.583 without. Neutral Classic 0.763 vs
-   0.554. This happens on flat gray, so it is not a highlight-only effect,
-   which contradicts D-018's luma thresholds .92-.95. 33 of 34 presets use
-   intensity 1.0 (Natural 0.3). Not fixed.
-3. Halide input encoding. Even with halation off, Process Zero crushes to 0
-   below about 0.15 and clips above about 0.75. Apple Log input fits Process
-   Zero far better than sRGB (mean error 0.035 vs 0.123) but this is a fit,
-   not proof. Carbon feeds sRGB-encoded values. Elysia renders landscape
-   foliage magenta; the cause is not isolated.
-4. Lapse renderer (Core Image reconstruction, not validated against Lapse).
-   Journal: 0.388 -> 0.918, everything at or above 0.522 clips to 1.0.
-   Photo Default: compresses to about 0.2-0.58 and is non-monotonic
-   (0.780 -> 0.518 is darker than 0.522 -> 0.576). Causes not isolated; add
-   per-stage diagnostics for LapseRenderer before guessing.
-
-## Decisions needed from the operator
-
-- Fix bugs 1, 2 (and 4) before measuring, or document current behavior?
-- Bug 3: change Carbon's Halide input encoding, or ship the current look?
+1. Natural grain. Was a black layer with noise alpha: 0.73 -> about 0.4,
+   std 0.33. Now zero-mean additive grain (FilmEffects.grain, D-017 hash,
+   opacity amount*0.2) and Natural's grain is 0 per D-025. 0.73 -> 0.78, std 0.002.
+2. Halation. CIBloom + screen lit flat midtones (Process Zero 0.52 -> 0.91).
+   Now highlight-only with D-018 thresholds and colours (FilmEffects.halation);
+   Process Zero with and without halation is identical below input 0.9.
+3. Halide input. Cubes now get Apple Log / Rec.2020 input
+   (FilmEffects.applyHalideCube); DisplayP3-named looks are converted from P3.
+   Process Zero flat fields track input within 0.06. Chroma Noir's white still
+   tops out low (slope 0.31); its pre-LUT channel mix was never recovered.
+4. Elysia magenta foliage. The defect is in ElysiaSDR.ccube itself (SDR and HDR,
+   any input encoding). `scripts/derive_elysia_lut.py` writes ElysiaCarbonSDR.ccube,
+   changing only nodes whose green hue flips by >75 degrees (2,669 of 35,937);
+   green-dominant nodes rendered with green lowest: 1,821 -> 0. Skin max dE 0.006.
+5. Lapse. Opacity blends scaled only alpha (1.7x brightening, Journal clipped at
+   0.52); CA summed three full-alpha planes; Photo Default vignette pow(r,.09)
+   darkened nearly every pixel. Fixed with dissolves, a sampler CA kernel, and
+   a reconstructed Metal vignette (shader body not recovered). Journal now
+   tracks input to 0.9; Photo Default is a faded curve (black 0.39, white 0.87).
 
 ## Disproved
 
