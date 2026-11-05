@@ -1,5 +1,6 @@
 import XCTest
 import CoreImage
+import ImageIO
 @testable import CarbonKit
 
 final class RAWDevelopmentTests: XCTestCase {
@@ -32,6 +33,8 @@ final class RAWDevelopmentTests: XCTestCase {
 
     func testPureRAWControlsPreserveCameraCalibration() throws {
         let raw = try XCTUnwrap(CIRAWFilter(imageURL: fixture(neutral: [1, 0.85, 0.6])))
+        XCTAssertEqual(raw.nativeSize, CGSize(width: SyntheticRAWFixture.width,
+                                             height: SyntheticRAWFixture.height))
         let temperature = raw.neutralTemperature
         let tint = raw.neutralTint
         let orientation = raw.orientation
@@ -66,6 +69,11 @@ final class RAWDevelopmentTests: XCTestCase {
             where raw.inputKeys.contains(option.rawValue) {
             XCTAssertEqual((raw.value(forKey: option.rawValue) as? NSNumber)?.boolValue, false)
         }
+    }
+
+    func testSyntheticFixtureIsRecognizedAsDNG() throws {
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(fixture() as CFURL, nil))
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, "com.adobe.raw-image")
     }
 
     func testCameraWhiteBalanceMakesNeutralRampNeutralAndLinear() throws {
@@ -107,7 +115,7 @@ final class RAWDevelopmentTests: XCTestCase {
         let url = try fixture(neutral: [1, 0.85, 0.6])
         let full = try XCTUnwrap(PhotoGeometry.sourceImage(at: url))
         let preview = try XCTUnwrap(PhotoGeometry.sourceImage(at: url, maxPixelSize: 160))
-        XCTAssertEqual(preview.extent.size, CGSize(width: 160, height: 64))
+        XCTAssertEqual(preview.extent.size, CGSize(width: 160, height: 128))
         let fullGray = pixel(full, x: 160, y: 64, colorSpace: CIContextProvider.workingColorSpace)
         let previewGray = pixel(preview, x: 80, y: 32, colorSpace: CIContextProvider.workingColorSpace)
         for channel in 0..<3 {
@@ -119,5 +127,15 @@ final class RAWDevelopmentTests: XCTestCase {
         let url = try fixture()
         try Data("not a RAW image".utf8).write(to: url)
         XCTAssertNil(PhotoGeometry.sourceImage(at: url))
+    }
+
+    func testEmptyAndTruncatedDNGAreRejectedForFullSizeAndPreview() throws {
+        let url = try fixture()
+        let validData = try Data(contentsOf: url)
+        for data in [Data(), Data(validData.prefix(8)), Data(validData.prefix(512))] {
+            try data.write(to: url)
+            XCTAssertNil(PhotoGeometry.sourceImage(at: url))
+            XCTAssertNil(PhotoGeometry.sourceImage(at: url, maxPixelSize: 160))
+        }
     }
 }

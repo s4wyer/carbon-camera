@@ -9,7 +9,12 @@ enum PhotoGeometry {
             if let maxPixelSize, maxPixelSize > 0 {
                 raw.scaleFactor = Float(min(1, maxPixelSize / max(raw.nativeSize.width, raw.nativeSize.height)))
             }
-            return raw.outputImage
+            // Some decoders return a non-nil empty image for invalid input.
+            // Treat that as a failed decode before preview sizing or rendering.
+            guard let image = raw.outputImage,
+                  !image.extent.isEmpty, !image.extent.isInfinite,
+                  image.extent.width.isFinite, image.extent.height.isFinite else { return nil }
+            return image
         }
         return CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
     }

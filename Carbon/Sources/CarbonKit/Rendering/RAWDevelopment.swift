@@ -12,7 +12,11 @@ enum RAWDevelopment {
     }
 
     static func filter(at url: URL) -> CIRAWFilter? {
-        guard let raw = CIRAWFilter(imageURL: url) else { return nil }
+        // CIRAWFilter can initialize a generic, zero-sized filter even when
+        // ImageIO cannot decode the file. Reject it before configuring/scaling.
+        guard let raw = CIRAWFilter(imageURL: url),
+              raw.nativeSize.width.isFinite, raw.nativeSize.width > 0,
+              raw.nativeSize.height.isFinite, raw.nativeSize.height > 0 else { return nil }
         configure(raw)
         return raw
     }
