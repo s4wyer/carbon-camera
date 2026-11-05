@@ -171,6 +171,15 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Upload gallery capture logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Carbon-gallery-capture-logs
+          path: Carbon/build/Gallery-*.log
+          if-no-files-found: warn
+          retention-days: 14
+
       # Gallery generation uses a Debug fixture harness and simctl, so PNGs do
       # not wait for XCTest startup. All six real UI tests still run afterward.
       - name: Verify full UI interactions and accessibility
@@ -193,9 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Carbon-UI-test-logs
-          path: |
-            Carbon/build/UITestResults-*.log
-            Carbon/build/Gallery-*.log
+          path: Carbon/build/UITestResults-*.log
           if-no-files-found: warn
           retention-days: 14
 

@@ -116,7 +116,7 @@ compiles for a generic simulator, restricted to the runner's architecture. Tests
 then run directly from the generated `.xctestrun` file on that simulator, without
 loading the project again. CI rejects empty or skipped suites. Automatic screen
 recordings and screenshots are disabled; named PNG attachments are still captured
-explicitly by the UI tests and exported to the gallery. Each test job's summary
+explicitly by the UI tests and retained in their result bundle. Each test job's summary
 reports destination selection, compilation, the remaining simulator wait, and
 test execution times. Phase logs are also uploaded for startup diagnostics.
 

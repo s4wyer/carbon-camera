@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from capture_gallery import CAPTURES, wait_ready, write_request
 from export_screenshots import SCREENS
@@ -57,6 +57,19 @@ class CaptureProtocolTests(unittest.TestCase):
             wait_ready(self.directory, 'stock-bottom', 'current')
         self.ready(scene='stock-bottom', scrollPosition=1)
         self.assertEqual(wait_ready(self.directory, 'stock-bottom', 'current')['scrollPosition'], 1)
+
+    def test_ready_app_does_not_wait_for_a_slow_launch_client(self):
+        self.ready()
+        process = Mock()
+        process.poll.return_value = None
+        self.assertEqual(wait_ready(self.directory, 'camera', 'current', process=process)['scene'], 'camera')
+        process.wait.assert_not_called()
+
+    def test_launch_failure_is_reported_without_waiting_for_ready_timeout(self):
+        process = Mock()
+        process.poll.return_value = 17
+        with self.assertRaisesRegex(RuntimeError, 'launch failed \\(17\\)'):
+            wait_ready(self.directory, 'camera', 'current', process=process)
 
 
 if __name__ == '__main__':

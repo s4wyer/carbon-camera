@@ -34,9 +34,12 @@ def write_request(directory: Path, scene: str, token: str) -> None:
     temporary.replace(directory / 'request.json')
 
 
-def wait_ready(directory: Path, scene: str, token: str, timeout: float = 90) -> dict:
+def wait_ready(directory: Path, scene: str, token: str, timeout: float = 90,
+               process: subprocess.Popen | None = None) -> dict:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        if process is not None and (exit_code := process.poll()) not in (None, 0):
+            raise RuntimeError(f'Fixture app launch failed ({exit_code}); see Gallery-app.log')
         try:
             ready = json.loads((directory / 'ready.json').read_text(encoding='utf-8'))
         except (FileNotFoundError, json.JSONDecodeError):
@@ -86,9 +89,11 @@ def main() -> None:
     if architecture not in ('arm64', 'x86_64'):
         raise ValueError(f'Unsupported runner architecture: {architecture}')
     succeeded = False
-    with (build / 'Gallery-simulator.log').open('w', encoding='utf-8') as boot_log:
+    with (build / 'Gallery-simulator.log').open('w', encoding='utf-8') as boot_log, \
+         (build / 'Gallery-app.log').open('w', encoding='utf-8') as app_log:
         boot = subprocess.Popen(['xcrun', 'simctl', 'bootstatus', device, '-b'],
                                 stdout=boot_log, stderr=subprocess.STDOUT)
+        launch = None
         try:
             started = time.monotonic()
             command = [
@@ -117,18 +122,26 @@ def main() -> None:
             run(['xcrun', 'simctl', 'status_bar', device, 'override', '--time', '9:41',
                  '--dataNetwork', 'wifi', '--wifiMode', 'active', '--wifiBars', '3',
                  '--batteryState', 'charged', '--batteryLevel', '100'])
-            run(['xcrun', 'simctl', 'launch', '--terminate-running-process', device, APP_ID,
-                 '--ui-testing', '--insert-sample-shot', '--welcome-testing', '--capture-harness'])
-            record_timing('Install and launch fixture app', started)
-            started = time.monotonic()
+            # A cold Simulator may keep the launch client waiting even while
+            # the app starts. Use the app's matching readiness token as proof,
+            # rather than blocking on that client's completion first.
+            launch = subprocess.Popen(
+                ['xcrun', 'simctl', 'launch', '--terminate-running-process', device, APP_ID,
+                 '--ui-testing', '--insert-sample-shot', '--welcome-testing', '--capture-harness'],
+                stdout=app_log, stderr=subprocess.STDOUT,
+            )
             staging = build / 'GalleryAttachments'
             staging.mkdir(exist_ok=True)
             attachments = []
             acknowledgements = []
-            for scene, names in CAPTURES:
+            for index, (scene, names) in enumerate(CAPTURES):
                 token = uuid.uuid4().hex
                 write_request(control, scene, token)
-                acknowledgements.append(wait_ready(control, scene, token))
+                acknowledgements.append(wait_ready(control, scene, token,
+                                                    timeout=300 if index == 0 else 90, process=launch))
+                if index == 0:
+                    record_timing('Install and launch fixture app', started)
+                    started = time.monotonic()
                 primary = staging / f'{names[0]}.png'
                 run(['xcrun', 'simctl', 'io', device, 'screenshot', str(primary)])
                 for name in names:
@@ -145,6 +158,9 @@ def main() -> None:
             # The full UI suite reuses this booted device after gallery upload.
             succeeded = True
         finally:
+            if launch is not None and launch.poll() is None:
+                launch.terminate()
+                launch.wait(timeout=10)
             if boot.poll() is None:
                 boot.terminate()
                 boot.wait(timeout=10)
