@@ -303,6 +303,8 @@ public struct PresetDefinition: Codable, Identifiable, Equatable {
     
     /// Order hint for UI (0 = first/default).
     public let displayOrder: Int
+    /// Stable catalog number printed on Stock artwork. It is independent of array order.
+    public let catalogNumber: Int
     
     public init(id: UUID = UUID(),
                 presetID: String,
@@ -312,7 +314,8 @@ public struct PresetDefinition: Codable, Identifiable, Equatable {
                 baseParameters: PresetParameters,
                 carbonDeltas: [Delta] = [],
                 engineVersion: String,
-                displayOrder: Int) {
+                displayOrder: Int,
+                catalogNumber: Int? = nil) {
         self.id = id
         self.presetID = presetID
         self.displayName = displayName
@@ -322,6 +325,27 @@ public struct PresetDefinition: Codable, Identifiable, Equatable {
         self.carbonDeltas = carbonDeltas
         self.engineVersion = engineVersion
         self.displayOrder = displayOrder
+        self.catalogNumber = catalogNumber ?? max(1, displayOrder % 100 + 1)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, presetID, displayName, description, source, baseParameters
+        case carbonDeltas, engineVersion, displayOrder, catalogNumber
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        presetID = try values.decode(String.self, forKey: .presetID)
+        displayName = try values.decode(String.self, forKey: .displayName)
+        description = try values.decode(String.self, forKey: .description)
+        source = try values.decode(PresetSource.self, forKey: .source)
+        baseParameters = try values.decode(PresetParameters.self, forKey: .baseParameters)
+        carbonDeltas = try values.decode([Delta].self, forKey: .carbonDeltas)
+        engineVersion = try values.decode(String.self, forKey: .engineVersion)
+        displayOrder = try values.decode(Int.self, forKey: .displayOrder)
+        catalogNumber = try values.decodeIfPresent(Int.self, forKey: .catalogNumber)
+            ?? max(1, displayOrder % 100 + 1)
     }
 }
 

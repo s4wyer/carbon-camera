@@ -3,17 +3,21 @@ import SwiftUI
 /// Typographic styles modeled directly on `preset-card-concepts.html`:
 /// - `Inter-SemiBold` (weights 600) for running UI copy and restrained labels
 /// - `InterTight-Light` (300) and `InterTight-Black` (900) for Braun numerals and modernist block headlines
-/// - `SpaceMono-Regular` / `SpaceMono-Bold` for technical / ISO / darkroom indices
 /// - `ZenKakuGothicNew-Black` (900) for the Japanese poster geometry of Lapse
 ///
-/// Every font provides an explicit system-font fallback with matching metrics,
-/// so SwiftPM test targets running without the application bundle render cleanly.
+/// These faces are registered from the app bundle in project.yml; Stock artwork
+/// intentionally does not silently substitute system fonts.
 enum CarbonFont {
     static func inter(size: CGFloat, weight: Font.Weight = .regular) -> Font {
         if weight == .semibold || weight == .bold || weight == .heavy || weight == .black {
             return .custom("Inter-SemiBold", size: size)
         }
         return .system(size: size, weight: weight, design: .default)
+    }
+
+    /// Fixed bundled face for Stock artwork, avoiding system-font substitution.
+    static func stockInter(size: CGFloat) -> Font {
+        .custom("Inter-SemiBold", size: size)
     }
 
     static func interTightLight(size: CGFloat) -> Font {
