@@ -9,14 +9,22 @@ Measure all 34 presets in `PresetLibrary.all` through Carbon's real render
 path, then generate `presets.json` (single source of truth) and
 `PRESETS_GUIDE.md` (generated from it) for non-photographers.
 
-## Status: render bugs fixed, ratings and copy next
+## Status: guide generated; presets.json pending
 
-The four render bugs below are fixed on `analysis/preset-guide` and verified
-on CI renders (run 42119534797). `measure.py` now reads tone, grain and
-vignette from uniform flat fields (`flat_000`..`flat_100`, linear-luminance
-percent) and glow from `point_light`, so vignette no longer contaminates the
-tone curve. `rate.py` is still unwritten: every rating and sentence must come
-from `metrics.json`, with thresholds as named constants.
+Renders, measurement, rating and guide generation all run end to end. The four
+render bugs below are fixed on `analysis/preset-guide` and verified on CI
+renders (run 42119534797). `measure.py` reads tone, grain and vignette from
+uniform flat fields (`flat_000`..`flat_100`, linear-luminance percent) and glow
+from `point_light`, so vignette does not contaminate the tone curve.
+
+`rate.py` (step 4) and `generate_guide.py` (step 7) are written and committed.
+Every threshold in `rate.py` is a named constant set from the measured
+distribution of the 34 presets; every rating and sentence comes from
+`metrics.json`. `analysis/PRESETS_GUIDE.md` is generated, never hand-edited.
+
+Remaining: promote `.cache/presets.json` to `analysis/presets.json` as the
+committed source of truth (currently gitignored with the rest of `.cache/`),
+and add `run_all.py` to chain steps 0/2/4/7.
 
 ## Branch and worktrees
 
@@ -35,6 +43,8 @@ push to analysis/** branch          -> CI "Preset measurement harness" (macos-15
                                        artifact "preset-renders"
 gh run download <id> -n preset-renders -D analysis/renders
 python analysis/measure.py          -> analysis/.cache/metrics.json
+python analysis/rate.py             -> analysis/.cache/presets.json (ratings + copy)
+python analysis/generate_guide.py   -> analysis/PRESETS_GUIDE.md (generated)
 ```
 
 The harness (`analysis/harness/run_render.sh`) compiles the production
@@ -90,10 +100,12 @@ variants for Natural, Process Zero, Neutral Classic, and Elysia.
 - "Eternal is black and white."
 - First-pass numbers from the deleted analyze_presets.py and old guide.
 
-## Next steps once unblocked
+## Completed (three commits, pushed)
 
-1. Fix agreed bugs as separate commits; push; download new artifact.
-2. Re-run `measure.py`; rebuild contact sheets (see snippet in git history
-   of this file's commit message) and look at them.
-3. Write `rate.py` (named thresholds, every Great/Avoid traced to a metric,
-   copy composed from measured traits), `generate_guide.py`, `run_all.py`.
+1. `analysis/rate.py`: classify 34 presets into 6 look categories, rate each
+   Great/OK/Avoid for 6 scene types, derive 3 sliders and grain class from
+   measurements, generate user-facing copy from metrics. Output:
+   `analysis/.cache/presets.json` (single source of truth for ratings and copy).
+2. `analysis/generate_guide.py`: read presets.json and generate
+   `analysis/PRESETS_GUIDE.md` grouped by look, with near-duplicate detection.
+3. `analysis/PROGRESS.md` updated with completed status.
