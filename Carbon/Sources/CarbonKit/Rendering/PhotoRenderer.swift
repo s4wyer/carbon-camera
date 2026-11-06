@@ -401,32 +401,109 @@ final class PhotoRenderer: PhotoRendering, @unchecked Sendable {
         try cancellation.throwIfCancelled()
         let lutData = try loadLUT(lutID)
         try cancellation.throwIfCancelled()
+        
+        // Halide LUTs expect Apple Log (BT.2020) input.
+        // Convert working linear sRGB → linear BT.2020 → Apple Log before sampling.
+        // No Fusion and other LUTs expect sRGB gamma input (working linear → sRGB gamma).
+        let preparedImage: CIImage
+        let needsLinearConversion: Bool
+        
+        if lutID.hasPrefix("halide-") {
+            preparedImage = try applyAppleLogEncoding(to: image)
+            needsLinearConversion = true  // LUT outputs sRGB-encoded, but we stay in linear working space
+        } else {
+            // No Fusion: working linear → sRGB gamma
+            preparedImage = image.applyingFilter("CILinearToSRGBToneCurve")
+            needsLinearConversion = false  // Already in correct space
+        }
+        
         let rawData = lutData.rgba.withUnsafeBufferPointer { buffer in
             Data(buffer: buffer)
         }
         
-        guard let filter = CIFilter(name: "CIColorCubeWithColorSpace") else {
+        guard let filter = CIFilter(name: "CIColorCube") else {
             throw RenderError.metalUnavailable
         }
         filter.setValue(lutData.dimension, forKey: "inputCubeDimension")
         filter.setValue(rawData, forKey: "inputCubeData")
-        filter.setValue(colorSpace, forKey: "inputColorSpace")
-        filter.setValue(image, forKey: kCIInputImageKey)
+        filter.setValue(preparedImage, forKey: kCIInputImageKey)
         
         guard let lutOutput = filter.outputImage else {
             throw RenderError.lutNotFound(lutID)
         }
         
+        // Halide LUT output is sRGB-encoded; decode back to linear for rest of pipeline
+        let linearOutput = needsLinearConversion
+            ? lutOutput.applyingFilter("CISRGBToneCurveToLinear")
+            : lutOutput
+        
         // If intensity < 1.0, blend back with input
         if intensity < 0.999 {
-            guard let blend = CIFilter(name: "CIDissolveTransition") else { return lutOutput }
+            guard let blend = CIFilter(name: "CIDissolveTransition") else { return linearOutput }
             blend.setValue(image, forKey: kCIInputImageKey)
-            blend.setValue(lutOutput, forKey: kCIInputTargetImageKey)
+            blend.setValue(linearOutput, forKey: kCIInputTargetImageKey)
             blend.setValue(intensity, forKey: kCIInputTimeKey)
-            return blend.outputImage ?? lutOutput
+            return blend.outputImage ?? linearOutput
         }
         
-        return lutOutput
+        return linearOutput
+    }
+    
+    /// Convert working linear sRGB to Apple Log (BT.2020 primaries).
+    /// Apple Log formula: R0=-0.05641088, Rt=0.01, c=47.28711236,
+    /// beta=0.00964052, gamma=0.08550479, delta=0.69336945.
+    /// P = c*(R-R0)^2 for R0<=R<Rt, else gamma*log2(R+beta)+delta.
+    private func applyAppleLogEncoding(to image: CIImage) throws -> CIImage {
+        // 1. sRGB linear → BT.2020 linear (3x3 matrix)
+        guard let matrixFilter = CIFilter(name: "CIColorMatrix") else {
+            throw RenderError.metalUnavailable
+        }
+        matrixFilter.setValue(image, forKey: kCIInputImageKey)
+        // Matrix: sRGB (D65) → XYZ → BT.2020 (D65)
+        // Combined matrix (row vectors: R, G, B, bias)
+        matrixFilter.setValue(CIVector(x:  0.627402, y: 0.329292, z: 0.043306, w: 0), forKey: "inputRVector")
+        matrixFilter.setValue(CIVector(x:  0.069095, y: 0.919544, z: 0.011360, w: 0), forKey: "inputGVector")
+        matrixFilter.setValue(CIVector(x:  0.016394, y: 0.088028, z: 0.895578, w: 0), forKey: "inputBVector")
+        matrixFilter.setValue(CIVector(x:  0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+        matrixFilter.setValue(CIVector(x:  0, y: 0, z: 0, w: 0), forKey: "inputBiasVector")
+        
+        guard let bt2020Linear = matrixFilter.outputImage else {
+            throw RenderError.metalUnavailable
+        }
+        
+        // 2. Apply Apple Log transfer function via CIColorKernel
+        let kernel = try CIColorKernel(source: """
+            kernel vec4 appleLogOETF(__sample pixel) {
+                const float R0 = -0.05641088;
+                const float Rt = 0.01;
+                const float c = 47.28711236;
+                const float beta = 0.00964052;
+                const float gamma = 0.08550479;
+                const float delta = 0.69336945;
+                
+                vec3 R = pixel.rgb;
+                vec3 P;
+                
+                for (int i = 0; i < 3; i++) {
+                    if (R[i] < R0) {
+                        P[i] = 0.0;
+                    } else if (R[i] < Rt) {
+                        float d = R[i] - R0;
+                        P[i] = c * d * d;
+                    } else {
+                        P[i] = gamma * log2(R[i] + beta) + delta;
+                    }
+                }
+                
+                return vec4(P, pixel.a);
+            }
+            """)
+        
+        guard let appleLogImage = kernel.apply(extent: bt2020Linear.extent, arguments: [bt2020Linear]) else {
+            throw RenderError.metalUnavailable
+        }
+        
+        return appleLogImage
     }
     
     private func encodeOutput(_ image: CIImage) throws -> Data {
