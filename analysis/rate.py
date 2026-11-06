@@ -110,20 +110,26 @@ def classify_look(m: dict, preset_id: str) -> str:
     mid_shift = tone["mid_L_shift"]
     wb_b = tone["wb_b"]
 
-    # Vivid & punchy: notably high saturation (>1.08) OR very expanded contrast (>1.15)
-    if (chroma > CHROMA_SATURATED_THRESHOLD) or (slope > 1.15):
+    # Vivid & punchy: genuinely saturated (this is the dominant signal)
+    if chroma > CHROMA_SATURATED_THRESHOLD:
         return "Vivid & punchy"
 
-    # Cool & cinematic: strong cool shift (wb_b < -0.007) with reasonable contrast
-    if wb_b < COOL_THRESHOLD and slope > 0.90:
+    # Cool & cinematic: cool cast with real contrast, or a desaturated high-contrast look
+    if wb_b < COOL_THRESHOLD and slope > 1.00:
+        return "Cool & cinematic"
+    if chroma < 0.70 and slope > 1.05:
         return "Cool & cinematic"
 
-    # Faded & moody: desaturated (<0.82) + darkened + flat contrast (<0.82)
-    if chroma < CHROMA_MUTED_THRESHOLD and mid_shift < MID_DARK and slope < SLOPE_COMPRESSED_THRESHOLD:
+    # Faded & moody: desaturated + darkened tone + soft/flat contrast
+    if chroma < CHROMA_MUTED_THRESHOLD and mid_shift < -0.05 and slope < 0.90:
         return "Faded & moody"
 
-    # Warm & glowy: strong warm cast (wb_b > 0.009) + lifted midtones + soft
-    if wb_b > WARM_THRESHOLD and mid_shift > MID_BRIGHT and slope < SLOPE_COMPRESSED_THRESHOLD:
+    # High contrast alone (with normal colour) still reads punchy
+    if slope > 1.15:
+        return "Vivid & punchy"
+
+    # Warm & glowy: strong warm cast + lifted midtones + soft/flat contrast
+    if wb_b > WARM_THRESHOLD and mid_shift > 0.06 and slope < 0.90:
         return "Warm & glowy"
 
     # Default: True to life (balanced)
@@ -320,17 +326,17 @@ def warm_slider(m: dict) -> int:
         return 5  # Warm
 
 
-def grain_class(preset_id: str, grain_amount: float) -> str:
+def grain_class(m: dict) -> str:
     """
-    Classify based on baseParameters.grainAmount from the catalog.
-    (Note: grain rendering was disabled in D-025, so actual renders show 0 grain,
-    but the rating captures the design intent.)
+    Classify based on measured grain from render.
+    grain_L_std: [0.0, 0.005+] observed on flat midtone.
     """
-    if grain_amount <= 0.0:
+    grain = m["texture"]["grain_L_std"]
+    if grain < 0.0005:
         return "none"
-    elif grain_amount <= 0.2:
+    elif grain < 0.002:
         return "low"
-    elif grain_amount <= 0.5:
+    elif grain < 0.005:
         return "medium"
     else:
         return "heavy"
@@ -435,7 +441,7 @@ def main() -> int:
         vibrance = vibrance_slider(m)
         punch = punch_slider(m)
         warmth = warm_slider(m)
-        grain = grain_class(preset_id, 0.0)  # All grain amounts are 0.0 in D-025
+        grain = grain_class(m)
         
         # Copy
         copy = user_copy(m, preset_id, display_name, look, ratings)
